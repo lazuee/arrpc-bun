@@ -5,7 +5,11 @@ export const WEBSOCKET_PORT_RANGE: [number, number] = [6463, 6472];
 export const PROCESS_SCAN_INTERVAL = 5000;
 export const IPC_MAX_RETRIES = 9;
 export const SOCKET_AVAILABILITY_TIMEOUT = 1000;
-export const DETECTABLE_DB_PATH = resolve("detectable.json");
+export const DETECTABLE_DB_PATH = resolve(
+	import.meta.dirname,
+	"..",
+	"detectable.json",
+);
 
 export enum IPCMessageType {
 	HANDSHAKE = 0,

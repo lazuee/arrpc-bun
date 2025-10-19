@@ -4,7 +4,7 @@ import * as Bridge from "./bridge";
 import Server from "./server";
 import { log } from "./utils";
 
-log("arRPC-Bun v1.1.0");
+log("arRPC-Bun v1.1.1");
 
 (async () => {
 	// biome-ignore lint/suspicious/noTsIgnore: ts(80007) await is needed for async constructor

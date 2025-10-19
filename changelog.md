@@ -1,5 +1,14 @@
 # arRPC-Bun Changelog
 
+## v1.1.1 [19-10-2025]
+**Fixed path resolution for npm package installation**
+
+### Bug Fixes
+- **Fixed DETECTABLE_DB_PATH resolution** - Now resolves relative to package location instead of CWD
+  - Changed from `resolve("detectable.json")` to `resolve(import.meta.dirname, "..", "detectable.json")`
+  - Fixes `ENOENT: no such file or directory` error when installed as npm package
+  - Works correctly both when run from repo and when installed in `node_modules/`
+
 ## v1.1.0 [19-10-2025]
 **Fully native Bun implementation - Removed all Node.js WebSocket dependencies**
 
