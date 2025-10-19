@@ -6,7 +6,7 @@
   <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <h3>An open implementation of Discord's local RPC servers</h3>
   <h4>Allowing RPC where it was otherwise impossible, like Discord Web and custom clients</h4>
-  <h5>TypeScript + Bun Port • v1.0.0</h5>
+  <h5>TypeScript + Bun Port • v1.1.0</h5>
 </div>
 
 <br>
@@ -15,10 +15,13 @@ This is a complete TypeScript + Bun rewrite of the original [arRPC](https://gith
 
 arRPC is an open source implementation of Discord's half-documented local RPC servers for their desktop client. This TypeScript implementation using Bun runtime provides **full type safety with zero `any` types**, improved performance through Bun's native APIs, and better code organization while maintaining full compatibility with the original implementation. It opens a simple bridge WebSocket server which messages the JSON of exactly what to dispatch with in the client with no extra processing needed, allowing small and simple mods or plugins.
 
-## What's New in v1.0.0
+## What's New in v1.1.0
 
 - **Complete TypeScript port** - Full type safety with organized type system split across multiple `.d.ts` files
-- **Bun runtime** - Leverages Bun's native APIs (`color()`, etc.) for better performance
+- **Bun-native implementation** - Zero Node.js WebSocket dependencies
+  - Uses Bun's native `Bun.serve()` WebSocket support (removed `ws` package)
+  - Native `color()` API for terminal output
+  - Faster, lighter, and more efficient
 - **Centralized constants** - All magic numbers extracted to `constants.ts` with proper TypeScript enums
 - **Fixed code quality issues** - Converted recursive functions to iterative, proper error handling, graceful shutdown
 - **Better developer experience** - Biome linter, GitLab CI, comprehensive error messages

@@ -1,6 +1,6 @@
 {
 	"name": "arrpc-bun",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "TypeScript/Bun port of arRPC - Open Discord RPC server",
 	"main": "src/index.ts",
 	"module": "src/index.ts",
@@ -14,6 +14,19 @@
 	},
 	"bin": {
 		"arrpc-bun": "src/index.ts"
+	},
+	"files": [
+		"src/",
+		"scripts/",
+		"examples/",
+		"ext/",
+		"detectable.json",
+		"LICENSE",
+		"README.md",
+		"changelog.md"
+	],
+	"engines": {
+		"bun": ">=1.0.0"
 	},
 	"repository": {
 		"type": "git",
@@ -33,15 +46,8 @@
 		"typescript",
 		"arrpc"
 	],
-	"dependencies": {
-		"ws": "latest"
-	},
 	"devDependencies": {
 		"@biomejs/biome": "latest",
-		"@types/bun": "latest",
-		"@types/ws": "latest"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
+		"@types/bun": "latest"
 	}
 }

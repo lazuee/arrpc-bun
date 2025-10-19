@@ -1,7 +1,4 @@
-import type { IncomingMessage } from "node:http";
-import { createServer, type Server as HTTPServer } from "node:http";
-import { parse } from "node:querystring";
-import { type WebSocket, WebSocketServer } from "ws";
+import type { ServerWebSocket } from "bun";
 import { WEBSOCKET_PORT_RANGE } from "../constants";
 import type {
 	ExtendedWebSocket,
@@ -14,8 +11,7 @@ const log = createLogger("websocket", 235, 69, 158);
 
 export default class WSServer {
 	private handlers!: Handlers;
-	private http?: HTTPServer;
-	private wss?: WebSocketServer;
+	private server?: ReturnType<typeof Bun.serve>;
 
 	constructor(handlers: Handlers) {
 		return (async () => {
@@ -25,102 +21,125 @@ export default class WSServer {
 			this.onMessage = this.onMessage.bind(this);
 
 			let port = WEBSOCKET_PORT_RANGE[0];
-
-			let http: HTTPServer | undefined;
-			let wss: WebSocketServer | undefined;
+			let server: ReturnType<typeof Bun.serve> | undefined;
 
 			while (port <= WEBSOCKET_PORT_RANGE[1]) {
 				if (process.env.ARRPC_DEBUG) log("trying port", port);
 
-				if (
-					await new Promise<boolean>((res) => {
-						http = createServer();
-						http.on("error", (e: NodeJS.ErrnoException) => {
-							if (e.code === "EADDRINUSE") {
-								log(port, "in use!");
-								res(false);
+				try {
+					server = Bun.serve({
+						port,
+						hostname: "127.0.0.1",
+						fetch: (req, server) => {
+							const url = new URL(req.url);
+							const params = url.searchParams;
+							const ver = Number.parseInt(params.get("v") ?? "1", 10);
+							const encoding = params.get("encoding") ?? "json";
+							const clientId = params.get("client_id") ?? "";
+							const origin = req.headers.get("origin") ?? "";
+
+							if (
+								origin !== "" &&
+								![
+									"https://discord.com",
+									"https://ptb.discord.com",
+									"https://canary.discord.com",
+								].includes(origin)
+							) {
+								log("disallowed origin", origin);
+								return new Response("Disallowed origin", { status: 403 });
 							}
-						});
 
-						wss = new WebSocketServer({ server: http });
-						wss.on("error", (_e) => {});
+							if (encoding !== "json") {
+								log("unsupported encoding requested", encoding);
+								return new Response("Unsupported encoding", { status: 400 });
+							}
 
-						wss.on("connection", this.onConnection);
+							if (ver !== 1) {
+								log("unsupported version requested", ver);
+								return new Response("Unsupported version", { status: 400 });
+							}
 
-						http.listen(port, "127.0.0.1", () => {
-							log("listening on", port);
+							const upgraded = server.upgrade(req, {
+								data: { clientId, encoding, origin },
+							});
 
-							this.http = http;
-							this.wss = wss;
+							if (!upgraded) {
+								return new Response("WebSocket upgrade failed", {
+									status: 400,
+								});
+							}
 
-							res(true);
-						});
-					})
-				)
+							return undefined;
+						},
+						websocket: {
+							open: (
+								ws: ServerWebSocket<{
+									clientId: string;
+									encoding: string;
+									origin: string;
+								}>,
+							) => this.onConnection(ws),
+							message: (
+								ws: ServerWebSocket<{
+									clientId: string;
+									encoding: string;
+									origin: string;
+								}>,
+								message: string | Buffer,
+							) => this.onMessage(ws, message),
+							close: (
+								ws: ServerWebSocket<{
+									clientId: string;
+									encoding: string;
+									origin: string;
+								}>,
+							) => {
+								const extSocket = ws as unknown as ExtendedWebSocket;
+								log("socket closed");
+								this.handlers.close(extSocket);
+							},
+						},
+					});
+
+					log("listening on", port);
+					this.server = server;
 					break;
-				port++;
+				} catch (e) {
+					if ((e as Error).message?.includes("EADDRINUSE")) {
+						log(port, "in use!");
+						port++;
+						continue;
+					}
+					throw e;
+				}
+			}
+
+			if (!this.server) {
+				throw new Error("Failed to find available port");
 			}
 
 			return this;
 		})() as unknown as WSServer;
 	}
 
-	onConnection(socket: WebSocket, req: IncomingMessage): void {
-		const params = parse(req.url?.split("?")[1] ?? "");
-		const ver = Number.parseInt((params.v as string) ?? "1", 10);
-		const encoding = (params.encoding as string) ?? "json";
-		const clientId = (params.client_id as string) ?? "";
+	onConnection(
+		ws: ServerWebSocket<{ clientId: string; encoding: string; origin: string }>,
+	): void {
+		const extSocket = ws as unknown as ExtendedWebSocket;
+		const { clientId, encoding } = ws.data;
 
-		const origin = req.headers.origin ?? "";
-
-		if (process.env.ARRPC_DEBUG)
-			log(
-				"new connection! origin:",
-				origin,
-				JSON.parse(JSON.stringify(params)),
-			);
-
-		if (
-			origin !== "" &&
-			![
-				"https://discord.com",
-				"https://ptb.discord.com",
-				"https://canary.discord.com",
-			].includes(origin)
-		) {
-			log("disallowed origin", origin);
-			socket.close();
-			return;
+		if (process.env.ARRPC_DEBUG) {
+			log("new connection! clientId:", clientId, "encoding:", encoding);
 		}
 
-		if (encoding !== "json") {
-			log("unsupported encoding requested", encoding);
-			socket.close();
-			return;
-		}
-
-		if (ver !== 1) {
-			log("unsupported version requested", ver);
-			socket.close();
-			return;
-		}
-
-		const extSocket = socket as ExtendedWebSocket;
 		extSocket.clientId = clientId;
 		extSocket.encoding = encoding;
 
-		socket.on("error", (e) => {
-			log("socket error", e);
-		});
+		extSocket._send = (data: string | Buffer) => {
+			ws.send(typeof data === "string" ? data : data.toString());
+		};
 
-		socket.on("close", (e, r) => {
-			log("socket closed", e, r);
-			this.handlers.close(extSocket);
-		});
-
-		socket.on("message", this.onMessage.bind(this, extSocket));
-
-		extSocket._send = extSocket.send as (data: string | Buffer) => void;
 		extSocket.send = (msg: RPCMessage | string) => {
 			if (process.env.ARRPC_DEBUG) log("sending", msg);
 			const data = typeof msg === "string" ? msg : JSON.stringify(msg);
@@ -130,9 +149,13 @@ export default class WSServer {
 		this.handlers.connection(extSocket);
 	}
 
-	onMessage(socket: ExtendedWebSocket, msg: Buffer | string): void {
+	onMessage(
+		ws: ServerWebSocket<{ clientId: string; encoding: string; origin: string }>,
+		msg: Buffer | string,
+	): void {
+		const extSocket = ws as unknown as ExtendedWebSocket;
 		const parsedMsg = JSON.parse(msg.toString()) as RPCMessage;
 		if (process.env.ARRPC_DEBUG) log("message", parsedMsg);
-		this.handlers.message(socket, parsedMsg);
+		this.handlers.message(extSocket, parsedMsg);
 	}
 }

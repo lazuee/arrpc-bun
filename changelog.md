@@ -1,11 +1,33 @@
 # arRPC-Bun Changelog
 
+## v1.1.0 [19-10-2025]
+**Fully native Bun implementation - Removed all Node.js WebSocket dependencies**
+
+### Major Changes
+- **Native Bun WebSocket support** - Replaced `ws` package with `Bun.serve()` native WebSocket
+  - Bridge WebSocket server now uses pure Bun implementation
+  - RPC WebSocket transport uses pure Bun implementation
+  - Zero external WebSocket dependencies
+  - Better performance and lower memory footprint
+- **Removed dependencies** - Removed `ws` and `@types/ws` packages completely
+- **Updated type definitions** - Removed dependency on `ws` types, using pure Bun types
+
+### Technical Improvements
+- WebSocket connections handled directly by Bun runtime
+- Port discovery using native Bun error handling
+- Origin validation in fetch handler
+- Query parameter parsing using native URL API
+- All WebSocket functionality now 100% Bun-native
+
 ## v1.0.0 [18-10-2025]
 **Complete TypeScript/Bun rewrite of arRPC**
 
 ### Major Changes
 - **Complete TypeScript port** - Full type safety with zero `any` types
 - **Bun runtime** - Leverages Bun's native APIs for better performance
+  - Native `Bun.serve()` WebSocket support (removed `ws` package dependency)
+  - Native `color()` API for terminal colors
+  - Zero Node.js-specific packages for WebSocket functionality
 - **Organized type system** - Types split into logical `.d.ts` files (`activity`, `rpc`, `socket`, `process`)
 - **Centralized constants** - All magic numbers extracted to `constants.ts`
 - **TypeScript enums** - Proper enums for IPC message types, close codes, and error codes

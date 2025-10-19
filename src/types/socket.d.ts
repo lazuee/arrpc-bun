@@ -1,5 +1,4 @@
 import type { Socket as NetSocket } from "node:net";
-import type { WebSocket } from "ws";
 import type { RPCMessage } from "./rpc.d.ts";
 
 export interface ExtendedSocket extends NetSocket {
@@ -13,7 +12,7 @@ export interface ExtendedSocket extends NetSocket {
 	_handshook?: boolean;
 }
 
-export interface ExtendedWebSocket extends Omit<WebSocket, "send"> {
+export interface ExtendedWebSocket {
 	send: (msg: RPCMessage | string) => void;
 	_send?: (data: string | Buffer) => void;
 	clientId?: string;
