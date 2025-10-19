@@ -1,19 +1,30 @@
- <div align="center">
+<div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/19228318/202900211-95e8474b-edbb-4048-ba0b-a581a6d57fc4.png" width=300>
     <img alt="arRPC" src="https://user-images.githubusercontent.com/19228318/203024061-064fc015-9096-40c3-9786-ad23d90414a6.png" width=300>
   </picture> <br>
-  <a href="https://choosealicense.com/licenses/mit/l"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+  <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <h3>An open implementation of Discord's local RPC servers</h3>
   <h4>Allowing RPC where it was otherwise impossible, like Discord Web and custom clients</h4>
-  <h5>TypeScript + Bun Port</h5>
+  <h5>TypeScript + Bun Port • v1.0.0</h5>
 </div>
 
 <br>
 
-This is a TypeScript + Bun port of the original [arRPC](https://github.com/OpenAsar/arrpc) project.
+This is a complete TypeScript + Bun rewrite of the original [arRPC](https://github.com/OpenAsar/arrpc) project by OpenAsar.
 
-arRPC is an open source implementation of Discord's half-documented local RPC servers for their desktop client. This TypeScript implementation using Bun runtime provides improved type safety and performance while maintaining full compatibility with the original implementation. It opens a simple bridge WebSocket server which messages the JSON of exactly what to dispatch with in the client with no extra processing needed, allowing small and simple mods or plugins. **arRPC is experimental and a work in progress, so expect bugs, etc.**
+arRPC is an open source implementation of Discord's half-documented local RPC servers for their desktop client. This TypeScript implementation using Bun runtime provides **full type safety with zero `any` types**, improved performance through Bun's native APIs, and better code organization while maintaining full compatibility with the original implementation. It opens a simple bridge WebSocket server which messages the JSON of exactly what to dispatch with in the client with no extra processing needed, allowing small and simple mods or plugins.
+
+## What's New in v1.0.0
+
+- **Complete TypeScript port** - Full type safety with organized type system split across multiple `.d.ts` files
+- **Bun runtime** - Leverages Bun's native APIs (`color()`, etc.) for better performance
+- **Centralized constants** - All magic numbers extracted to `constants.ts` with proper TypeScript enums
+- **Fixed code quality issues** - Converted recursive functions to iterative, proper error handling, graceful shutdown
+- **Better developer experience** - Biome linter, GitLab CI, comprehensive error messages
+- **Improved project structure** - Dedicated `scripts/` directory, root-level database for better visibility
+
+See the [changelog](changelog.md) for full details.
 
 <br>
 
@@ -50,7 +61,23 @@ bun run dev
 ### Update Detectable Apps Database
 To update the list of detectable applications from Discord's API:
 ```bash
-bun run update_db.ts
+bun run update-db
+```
+
+### Development
+Check code quality with Biome:
+```bash
+bun run lint
+```
+
+Fix linting issues automatically:
+```bash
+bun run lint:fix
+```
+
+Type check with TypeScript:
+```bash
+bunx tsc --noEmit
 ```
 
 ### Web
@@ -75,6 +102,21 @@ These clients have arRPC specially integrated, just enable the option in its set
 ---
 
 Then just use apps with Discord RPC like normal and they *should* work!
+
+<br>
+
+## Configuration
+
+arRPC can be configured using environment variables:
+
+- `ARRPC_BRIDGE_PORT` - WebSocket bridge port (default: 1337)
+- `ARRPC_DEBUG` - Enable debug logging (set to any value to enable)
+- `ARRPC_NO_PROCESS_SCANNING` - Disable automatic game detection (set to any value to disable)
+
+Example:
+```bash
+ARRPC_DEBUG=1 ARRPC_BRIDGE_PORT=6969 bun start
+```
 
 <br>
 
@@ -104,27 +146,41 @@ arrpc.bun/
 │   ├── index.ts           # Main entry point
 │   ├── server.ts          # RPC server implementation
 │   ├── bridge.ts          # WebSocket bridge for web clients
-│   ├── types.ts           # TypeScript type definitions
+│   ├── constants.ts       # Centralized constants and enums
 │   ├── utils.ts           # Utility functions (logging, etc.)
+│   ├── types/             # TypeScript type definitions
+│   │   ├── activity.d.ts  # Activity-related types
+│   │   ├── rpc.d.ts       # RPC protocol types
+│   │   ├── socket.d.ts    # Socket and handler types
+│   │   ├── process.d.ts   # Process scanning types
+│   │   └── index.d.ts     # Type exports
 │   ├── transports/
 │   │   ├── ipc.ts         # IPC transport (named pipes/unix sockets)
 │   │   └── websocket.ts   # WebSocket transport
 │   └── process/
 │       ├── index.ts       # Process scanning for auto-detection
-│       ├── detectable.json # Database of detectable applications
 │       └── native/
 │           ├── index.ts   # Native platform exports
 │           ├── linux.ts   # Linux process scanning
 │           └── win32.ts   # Windows process scanning
+├── scripts/
+│   └── update_db.ts       # Script to update detectable.json
 ├── examples/              # Example integration code
 ├── ext/                   # Browser extensions
-├── update_db.ts           # Script to update detectable.json
+├── detectable.json        # Database of detectable applications
 └── package.json
 ```
 
 ## Original Project
 
-This is a port of the original [arRPC](https://github.com/OpenAsar/arrpc) by OpenAsar.
+This is a TypeScript/Bun port of the original [arRPC](https://github.com/OpenAsar/arrpc) by the OpenAsar team.
+
+**Original work**: Copyright (c) 2022 OpenAsar
+**TypeScript/Bun port**: Copyright (c) 2025 creations
+
+## Repository
+
+This port is maintained at: [https://heliopolis.live/creations/arrpc-bun](https://heliopolis.live/creations/arrpc-bun)
 
 ## License
 
