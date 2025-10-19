@@ -1,0 +1,32 @@
+import type { Socket as NetSocket } from "node:net";
+import type { WebSocket } from "ws";
+import type { RPCMessage } from "./rpc.d.ts";
+
+export interface ExtendedSocket extends NetSocket {
+	send?: (msg: RPCMessage) => void;
+	_send?: (msg: RPCMessage) => void;
+	close?: (code?: number, message?: string) => void;
+	clientId?: string;
+	encoding?: string;
+	socketId?: number;
+	lastPid?: number;
+	_handshook?: boolean;
+}
+
+export interface ExtendedWebSocket extends Omit<WebSocket, "send"> {
+	send: (msg: RPCMessage | string) => void;
+	_send?: (data: string | Buffer) => void;
+	clientId?: string;
+	encoding?: string;
+	socketId?: number;
+	lastPid?: number;
+}
+
+export interface Handlers {
+	connection: (socket: ExtendedSocket | ExtendedWebSocket) => void;
+	message: (
+		socket: ExtendedSocket | ExtendedWebSocket,
+		msg: RPCMessage,
+	) => void;
+	close: (socket: ExtendedSocket | ExtendedWebSocket) => void;
+}

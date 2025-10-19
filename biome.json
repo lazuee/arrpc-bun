@@ -1,0 +1,74 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.2.6/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": false
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": [
+			"**",
+			"!**/dist",
+			"!**/ext",
+			"!**/examples",
+			"!**/detectable.json"
+		],
+		"maxSize": 5242880
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineEnding": "lf"
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"css": {
+		"formatter": {
+			"indentStyle": "tab",
+			"lineEnding": "lf"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"correctness": {
+				"noUnusedImports": "error",
+				"noUnusedVariables": "error",
+				"noConstructorReturn": "off"
+			},
+			"suspicious": {
+				"noVar": "error",
+				"noExplicitAny": "warn"
+			},
+			"style": {
+				"useConst": "error",
+				"noParameterAssign": "error",
+				"useAsConstAssertion": "error",
+				"useDefaultParameterLast": "error",
+				"useEnumInitializers": "error",
+				"useSelfClosingElements": "error",
+				"useSingleVarDeclarator": "error",
+				"noUnusedTemplateLiteral": "error",
+				"useNumberNamespace": "error",
+				"noInferrableTypes": "error",
+				"noUselessElse": "error"
+			}
+		},
+		"includes": ["**", "!**/types/**"]
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"indentStyle": "tab",
+			"lineEnding": "lf",
+			"semicolons": "always"
+		}
+	}
+}

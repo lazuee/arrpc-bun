@@ -1,0 +1,47 @@
+{
+	"name": "arrpc-bun",
+	"version": "1.0.0",
+	"description": "TypeScript/Bun port of arRPC - Open Discord RPC server",
+	"main": "src/index.ts",
+	"module": "src/index.ts",
+	"type": "module",
+	"scripts": {
+		"start": "bun run src/index.ts",
+		"dev": "bun --watch src/index.ts",
+		"lint": "bunx biome check",
+		"lint:fix": "bunx biome check --fix",
+		"update-db": "bun run scripts/update_db.ts"
+	},
+	"bin": {
+		"arrpc-bun": "src/index.ts"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://heliopolis.live/creations/arrpc-bun.git"
+	},
+	"author": "OpenAsar (original), creations (TypeScript port)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://heliopolis.live/creations/arrpc-bun/-/issues"
+	},
+	"homepage": "https://heliopolis.live/creations/arrpc-bun",
+	"keywords": [
+		"discord",
+		"rpc",
+		"rich-presence",
+		"bun",
+		"typescript",
+		"arrpc"
+	],
+	"dependencies": {
+		"ws": "latest"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "latest",
+		"@types/bun": "latest",
+		"@types/ws": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}
