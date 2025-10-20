@@ -1,5 +1,15 @@
 # arRPC-Bun Changelog
 
+## v1.1.3 [19-10-2025]
+**Fixed Windows 11 compatibility**
+
+### Bug Fixes
+- **Replaced deprecated wmic with PowerShell** - Windows process scanning now uses `Get-Process` cmdlet
+  - `wmic` was removed in Windows 11
+  - Now uses: `powershell -Command "Get-Process | Select-Object Id,Path | ConvertTo-Csv"`
+  - Works on Windows 10, 11, and future versions
+  - Maintains same functionality for game detection
+
 ## v1.1.2 [19-10-2025]
 **Added port retry logic for bridge server**
 

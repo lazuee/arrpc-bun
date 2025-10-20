@@ -3,22 +3,21 @@ import type { ProcessInfo } from "../../types/index.d.ts";
 
 export const getProcesses = (): Promise<ProcessInfo[]> =>
 	new Promise((res) =>
-		exec("wmic process get ProcessID,ExecutablePath /format:csv", (_e, out) => {
-			res(
-				out
-					.toString()
-					.split("\r\n")
-					.slice(2)
-					.map((x) => {
-						const parsed = x.trim().split(",").slice(1).reverse();
-						const pidNum = Number.parseInt(parsed[0] || "0", 10);
-						return [
-							Number.isNaN(pidNum) ? 0 : pidNum,
-							parsed[1] || "",
-							[],
-						] as ProcessInfo;
+		exec(
+			'powershell -Command "Get-Process | Select-Object Id,Path | ConvertTo-Csv -NoTypeInformation"',
+			(_e, out) => {
+				const lines = out.toString().split("\n");
+				const processes = lines
+					.slice(1)
+					.map((line) => {
+						const match = line.match(/"(\d+)","(.*)"/);
+						if (!match || !match[1] || !match[2]) return null;
+						const pid = Number.parseInt(match[1], 10);
+						const path = match[2].replace(/\\\\/g, "\\");
+						return [pid, path, []] as ProcessInfo;
 					})
-					.filter((x) => x[1]),
-			);
-		}),
+					.filter((x): x is ProcessInfo => x !== null && x[1] !== "");
+				res(processes);
+			},
+		),
 	);
