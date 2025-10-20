@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-export const BRIDGE_PORT = 1337;
+export const BRIDGE_PORT_RANGE: [number, number] = [1337, 1347];
 export const WEBSOCKET_PORT_RANGE: [number, number] = [6463, 6472];
 export const PROCESS_SCAN_INTERVAL = 5000;
 export const IPC_MAX_RETRIES = 9;

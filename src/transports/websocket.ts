@@ -106,7 +106,11 @@ export default class WSServer {
 					this.server = server;
 					break;
 				} catch (e) {
-					if ((e as Error).message?.includes("EADDRINUSE")) {
+					const error = e as { code?: string; message?: string };
+					if (
+						error.code === "EADDRINUSE" ||
+						error.message?.includes("EADDRINUSE")
+					) {
 						log(port, "in use!");
 						port++;
 						continue;

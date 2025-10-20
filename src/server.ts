@@ -50,8 +50,8 @@ export default class RPCServer extends EventEmitter {
 				close: this.onClose,
 			};
 
-			this.ipc = await new IPCServer(handlers);
 			this.ws = await new WSServer(handlers);
+			this.ipc = await new IPCServer(handlers);
 
 			if (
 				!process.argv.includes("--no-process-scanning") &&

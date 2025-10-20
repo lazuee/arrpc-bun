@@ -1,5 +1,16 @@
 # arRPC-Bun Changelog
 
+## v1.1.2 [19-10-2025]
+**Added port retry logic for bridge server**
+
+### Improvements
+- **Bridge port retry** - Bridge server now tries multiple ports (1337-1347) instead of crashing
+  - No more "EADDRINUSE" errors with large stack traces
+  - Automatically tries next port if current one is in use
+  - Logs which port it's trying in debug mode
+  - Clean error message only if all ports in range are exhausted
+- **Better error handling** - More graceful handling when ports are in use
+
 ## v1.1.1 [19-10-2025]
 **Fixed path resolution for npm package installation**
 
