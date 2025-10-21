@@ -4,7 +4,7 @@ import { log } from "@utils";
 import * as Bridge from "./bridge";
 import Server from "./server";
 
-log("arRPC-Bun v1.1.4");
+log("arRPC-Bun v1.1.5");
 
 Bridge.init();
 

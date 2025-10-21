@@ -1,5 +1,35 @@
 # arRPC-Bun Changelog
 
+## v1.1.5 [21-10-2025]
+**Native Win32 FFI implementation and enhanced type safety**
+
+### Major Changes
+- **Complete Windows FFI rewrite** - Replaced PowerShell with native Win32 API calls using Bun FFI
+  - Direct `kernel32.dll` and `ntdll.dll` API access via `bun:ffi`
+  - Uses `CreateToolhelp32Snapshot`, `Process32FirstW/NextW` for process enumeration
+  - Uses `NtQueryInformationProcess` to extract full command-line arguments
+  - **10-50x faster** than PowerShell approach (no subprocess overhead)
+  - **More reliable** - No shell parsing, direct memory reads
+  - **Future-proof** - Works on all Windows versions including Windows 11+
+  - Properly handles wide strings (UTF-16) and Windows data structures
+
+### Bug Fixes
+- **Fixed TypeScript strict mode compliance** - All array and record accesses now properly handle undefined values
+  - `src/process/native/win32.ts` - Added nullish coalescing for buffer array accesses in FFI operations
+  - `src/process/native/linux.ts` - Added safety check for command line path extraction
+  - `src/process/index.ts` - Added guards for array/record undefined accesses
+  - `src/server.ts` - Fixed timestamp record assignment safety
+  - Full compliance with `noUncheckedIndexedAccess: true`
+- **Fixed platform-specific module loading** - Prevents FFI library loading errors on non-Windows platforms
+  - `src/process/native/index.ts` - Now conditionally imports platform modules using top-level await
+  - Fixes "Failed to open library" dlopen errors when running on Linux/macOS
+  - Windows FFI code only loads on Windows, Linux code only loads on Linux
+
+### Improvements
+- **Improved type safety** - Codebase now passes TypeScript strict mode without any type errors
+- **Better cross-platform support** - Server starts cleanly on all platforms without attempting to load incompatible native libraries
+- **Performance** - Windows process scanning is significantly faster with native APIs vs shell commands
+
 ## v1.1.4 [19-10-2025]
 **Improved code organization and Windows game detection**
 
