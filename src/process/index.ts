@@ -1,12 +1,12 @@
 import fs from "node:fs";
-import { DETECTABLE_DB_PATH, PROCESS_SCAN_INTERVAL } from "../constants";
+import { DETECTABLE_DB_PATH, PROCESS_SCAN_INTERVAL } from "@constants";
 import type {
 	DetectableApp,
 	ExtendedSocket,
 	ExtendedWebSocket,
 	Handlers,
-} from "../types/index.d.ts";
-import { createLogger } from "../utils";
+} from "@types";
+import { createLogger } from "@utils";
 
 import * as Natives from "./native/index";
 

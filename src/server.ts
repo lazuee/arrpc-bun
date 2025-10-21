@@ -1,8 +1,5 @@
 import { EventEmitter } from "node:events";
-import { MOCK_USER } from "./constants";
-import ProcessServer from "./process/index";
-import IPCServer from "./transports/ipc";
-import WSServer from "./transports/websocket";
+import { MOCK_USER } from "@constants";
 import type {
 	ActivityPayload,
 	ExtendedSocket,
@@ -11,8 +8,11 @@ import type {
 	InviteArgs,
 	RPCMessage,
 	SetActivityArgs,
-} from "./types/index.d.ts";
-import { createLogger } from "./utils";
+} from "@types";
+import { createLogger } from "@utils";
+import ProcessServer from "./process/index";
+import IPCServer from "./transports/ipc";
+import WSServer from "./transports/websocket";
 
 const log = createLogger("server", 87, 242, 135);
 

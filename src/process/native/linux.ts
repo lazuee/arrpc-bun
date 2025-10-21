@@ -1,22 +1,23 @@
 import { readdir, readFile } from "node:fs/promises";
-import type { ProcessInfo } from "../../types/index.d.ts";
+import type { ProcessInfo } from "@types";
 
-export const getProcesses = async (): Promise<ProcessInfo[]> => {
+export async function getProcesses(): Promise<ProcessInfo[]> {
+	const pids = await readdir("/proc");
+
 	const processes = await Promise.all(
-		(await readdir("/proc")).map((pid) =>
-			+pid > 0
-				? readFile(`/proc/${pid}/cmdline`, "utf8").then(
-						(path) =>
-							[
-								+pid,
-								path.split("\0")[0],
-								path.split("\0").slice(1),
-							] as ProcessInfo,
-						() => null,
-					)
-				: null,
-		),
+		pids.map(async (pid) => {
+			const pidNum = Number.parseInt(pid, 10);
+			if (pidNum <= 0) return null;
+
+			try {
+				const cmdline = await readFile(`/proc/${pid}/cmdline`, "utf8");
+				const parts = cmdline.split("\0");
+				return [pidNum, parts[0], parts.slice(1)] as ProcessInfo;
+			} catch {
+				return null;
+			}
+		}),
 	);
 
 	return processes.filter((x): x is ProcessInfo => x !== null);
-};
+}

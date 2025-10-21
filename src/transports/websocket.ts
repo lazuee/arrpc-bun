@@ -1,11 +1,7 @@
+import { WEBSOCKET_PORT_RANGE } from "@constants";
+import type { ExtendedWebSocket, Handlers, RPCMessage } from "@types";
+import { createLogger } from "@utils";
 import type { ServerWebSocket } from "bun";
-import { WEBSOCKET_PORT_RANGE } from "../constants";
-import type {
-	ExtendedWebSocket,
-	Handlers,
-	RPCMessage,
-} from "../types/index.d.ts";
-import { createLogger } from "../utils";
 
 const log = createLogger("websocket", 235, 69, 158);
 

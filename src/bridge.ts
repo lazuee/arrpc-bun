@@ -1,7 +1,7 @@
+import { BRIDGE_PORT_RANGE } from "@constants";
+import type { ActivityPayload } from "@types";
+import { createLogger } from "@utils";
 import type { ServerWebSocket } from "bun";
-import { BRIDGE_PORT_RANGE } from "./constants";
-import type { ActivityPayload } from "./types/index.d.ts";
-import { createLogger } from "./utils";
 
 const log = createLogger("bridge", 87, 242, 135);
 

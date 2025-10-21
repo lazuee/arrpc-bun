@@ -1,5 +1,22 @@
 # arRPC-Bun Changelog
 
+## v1.1.4 [19-10-2025]
+**Improved code organization and Windows game detection**
+
+### Improvements
+- **TypeScript path aliases** - Added `@types`, `@constants`, `@utils` imports
+  - Cleaner imports: `from "@types"` instead of `from "../../types/index.d.ts"`
+  - Configured in `tsconfig.json` with `baseUrl` and `paths`
+  - All relative imports updated across codebase
+- **Windows anti-cheat compatibility** - Enhanced process detection for protected games
+  - Now includes `ProcessName` as fallback when `Path` is blocked
+  - Fixes detection for games with Easy Anti-Cheat (Dead by Daylight, etc.)
+  - Uses: `Get-Process | Select-Object Id,Path,ProcessName`
+- **Refactored native functions** - Converted arrow functions to regular function declarations
+  - Better readability and debugging
+  - Clearer variable names (`resolve` instead of `res`, `output` instead of `out`)
+  - Consistent style across Linux and Windows implementations
+
 ## v1.1.3 [19-10-2025]
 **Fixed Windows 11 compatibility**
 

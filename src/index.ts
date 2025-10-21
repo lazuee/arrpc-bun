@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 
+import { log } from "@utils";
 import * as Bridge from "./bridge";
 import Server from "./server";
-import { log } from "./utils";
 
-log("arRPC-Bun v1.1.3");
+log("arRPC-Bun v1.1.4");
 
 Bridge.init();
 

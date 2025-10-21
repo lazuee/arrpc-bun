@@ -6,7 +6,7 @@
   <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <h3>An open implementation of Discord's local RPC servers</h3>
   <h4>Allowing RPC where it was otherwise impossible, like Discord Web and custom clients</h4>
-  <h5>TypeScript + Bun Port • v1.1.3</h5>
+  <h5>TypeScript + Bun Port • v1.1.4</h5>
 </div>
 
 <br>
