@@ -69,9 +69,12 @@ export default class ProcessServer {
 			for (const { executables, id, name } of DetectableDB) {
 				let matched = executables?.some((x) => {
 					if (x.is_launcher) return false;
+					const firstChar = x.name[0];
+					const firstCompare = toCompare[0];
+					if (!firstChar || !firstCompare) return false;
 					if (
-						x.name[0] === ">"
-							? x.name.substring(1) !== toCompare[0]
+						firstChar === ">"
+							? x.name.substring(1) !== firstCompare
 							: !toCompare.some((y) => x.name === y)
 					) {
 						return false;
@@ -84,9 +87,12 @@ export default class ProcessServer {
 				if (!matched) {
 					matched = executables?.some((x) => {
 						if (!x.is_launcher) return false;
+						const firstChar = x.name[0];
+						const firstCompare = toCompare[0];
+						if (!firstChar || !firstCompare) return false;
 						if (
-							x.name[0] === ">"
-								? x.name.substring(1) !== toCompare[0]
+							firstChar === ">"
+								? x.name.substring(1) !== firstCompare
 								: !toCompare.some((y) => x.name === y)
 						) {
 							return false;
@@ -107,6 +113,9 @@ export default class ProcessServer {
 						timestamps[id] = Date.now();
 					}
 
+					const timestamp = timestamps[id];
+					if (!timestamp) continue;
+
 					this.handlers.message(
 						{
 							socketId: id,
@@ -118,7 +127,7 @@ export default class ProcessServer {
 									application_id: id,
 									name,
 									timestamps: {
-										start: timestamps[id],
+										start: timestamp,
 									},
 								},
 								pid,
@@ -131,7 +140,8 @@ export default class ProcessServer {
 
 		for (const id in timestamps) {
 			if (!ids.includes(id)) {
-				log("lost game!", names[id]);
+				const gameName = names[id];
+				log("lost game!", gameName ?? "unknown");
 				delete timestamps[id];
 
 				this.handlers.message(

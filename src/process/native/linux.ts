@@ -12,7 +12,9 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 			try {
 				const cmdline = await readFile(`/proc/${pid}/cmdline`, "utf8");
 				const parts = cmdline.split("\0");
-				return [pidNum, parts[0], parts.slice(1)] as ProcessInfo;
+				const path = parts[0];
+				if (!path) return null;
+				return [pidNum, path, parts.slice(1)] as ProcessInfo;
 			} catch {
 				return null;
 			}

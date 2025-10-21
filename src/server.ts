@@ -175,7 +175,8 @@ export default class RPCServer extends EventEmitter {
 								value.toString().length >
 								2
 						) {
-							timestamps[key] = Math.floor(1000 * value);
+							const newValue = Math.floor(1000 * value);
+							timestamps[key] = newValue as typeof value;
 						}
 					}
 				}

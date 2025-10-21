@@ -60,7 +60,7 @@ function readWideString(
 		i < buffer.length - 1 && chars.length < maxLength;
 		i += 2
 	) {
-		const charCode = buffer[i] | (buffer[i + 1] << 8);
+		const charCode = (buffer[i] ?? 0) | ((buffer[i + 1] ?? 0) << 8);
 		if (charCode === 0) break;
 		chars.push(charCode);
 	}
@@ -69,10 +69,10 @@ function readWideString(
 
 function readDWORD(buffer: Uint8Array, offset: number): number {
 	return (
-		buffer[offset] |
-		(buffer[offset + 1] << 8) |
-		(buffer[offset + 2] << 16) |
-		(buffer[offset + 3] << 24)
+		(buffer[offset] ?? 0) |
+		((buffer[offset + 1] ?? 0) << 8) |
+		((buffer[offset + 2] ?? 0) << 16) |
+		((buffer[offset + 3] ?? 0) << 24)
 	);
 }
 
