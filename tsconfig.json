@@ -14,13 +14,6 @@
 		"verbatimModuleSyntax": true,
 		"noEmit": true,
 
-		"baseUrl": ".",
-		"paths": {
-			"@types": ["./src/types/index.d.ts"],
-			"@constants": ["./src/constants.ts"],
-			"@utils": ["./src/utils.ts"]
-		},
-
 		// Best practices
 		"strict": true,
 		"skipLibCheck": true,

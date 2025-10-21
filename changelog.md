@@ -1,6 +1,6 @@
 # arRPC-Bun Changelog
 
-## v1.1.5 [21-10-2025]
+## v1.1.6 [21-10-2025]
 **Native Win32 FFI implementation and enhanced type safety**
 
 ### Major Changes
@@ -29,6 +29,10 @@
 - **Improved type safety** - Codebase now passes TypeScript strict mode without any type errors
 - **Better cross-platform support** - Server starts cleanly on all platforms without attempting to load incompatible native libraries
 - **Performance** - Windows process scanning is significantly faster with native APIs vs shell commands
+- **Reverted to relative imports** - Removed TypeScript path aliases (`@types`, `@constants`, `@utils`)
+  - Now uses standard relative imports (`./types`, `../constants`, etc.)
+  - Better compatibility with various bundlers and tools
+  - Removed `baseUrl` and `paths` from `tsconfig.json`
 
 ## v1.1.4 [19-10-2025]
 **Improved code organization and Windows game detection**

@@ -13,9 +13,9 @@ import {
 	IPCErrorCode,
 	IPCMessageType,
 	SOCKET_AVAILABILITY_TIMEOUT,
-} from "@constants";
-import type { ExtendedSocket, Handlers, RPCMessage } from "@types";
-import { createLogger } from "@utils";
+} from "../constants";
+import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
+import { createLogger } from "../utils";
 
 const log = createLogger("ipc", 254, 231, 92);
 

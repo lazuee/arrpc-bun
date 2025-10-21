@@ -1,6 +1,6 @@
 import { dlopen, FFIType, type Pointer, suffix } from "bun:ffi";
-import type { ProcessInfo } from "@types";
-import { createLogger } from "@utils";
+import type { ProcessInfo } from "../../types";
+import { createLogger } from "../../utils";
 
 const log = createLogger("process:win32", 237, 66, 69);
 

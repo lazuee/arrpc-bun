@@ -1,5 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
-import type { ProcessInfo } from "@types";
+import type { ProcessInfo } from "../../types";
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
 	const pids = await readdir("/proc");
