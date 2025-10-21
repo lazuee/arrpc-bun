@@ -33,7 +33,7 @@ export default class ProcessServer {
 	private intervalId?: Timer;
 
 	constructor(handlers: Handlers) {
-		if (!Native) return; // Unsupported platform
+		if (!Native) return;
 
 		this.handlers = handlers;
 		this.scan = this.scan.bind(this);
@@ -67,9 +67,23 @@ export default class ProcessServer {
 			}
 
 			for (const { executables, id, name } of DetectableDB) {
-				if (
-					executables?.some((x) => {
-						if (x.is_launcher) return false;
+				let matched = executables?.some((x) => {
+					if (x.is_launcher) return false;
+					if (
+						x.name[0] === ">"
+							? x.name.substring(1) !== toCompare[0]
+							: !toCompare.some((y) => x.name === y)
+					) {
+						return false;
+					}
+					if (args && x.arguments)
+						return args.join(" ").indexOf(x.arguments) > -1;
+					return true;
+				});
+
+				if (!matched) {
+					matched = executables?.some((x) => {
+						if (!x.is_launcher) return false;
 						if (
 							x.name[0] === ">"
 								? x.name.substring(1) !== toCompare[0]
@@ -80,8 +94,10 @@ export default class ProcessServer {
 						if (args && x.arguments)
 							return args.join(" ").indexOf(x.arguments) > -1;
 						return true;
-					})
-				) {
+					});
+				}
+
+				if (matched) {
 					names[id] = name;
 					pids[id] = pid;
 

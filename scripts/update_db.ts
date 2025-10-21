@@ -22,7 +22,9 @@ get("https://discord.com/api/v9/applications/detectable", (res) => {
 		file.close();
 
 		try {
-			const updated: DetectableApp[] = JSON.parse(readFileSync(path, "utf8"));
+			const updated: DetectableApp[] = JSON.parse(
+				readFileSync(path, "utf8"),
+			);
 			console.log("Updated detectable DB");
 			console.log(
 				`${current.length} -> ${updated.length} games (+${updated.length - current.length})`,

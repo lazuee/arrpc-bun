@@ -40,7 +40,9 @@ export const init = (): void => {
 				fetch(req, srv) {
 					const upgraded = srv.upgrade(req, { data: {} });
 					if (!upgraded) {
-						return new Response("WebSocket upgrade failed", { status: 400 });
+						return new Response("WebSocket upgrade failed", {
+							status: 400,
+						});
 					}
 					return undefined;
 				},

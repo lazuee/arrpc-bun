@@ -171,7 +171,9 @@ export default class RPCServer extends EventEmitter {
 						const value = timestamps[key];
 						if (
 							value &&
-							Date.now().toString().length - value.toString().length > 2
+							Date.now().toString().length -
+								value.toString().length >
+								2
 						) {
 							timestamps[key] = Math.floor(1000 * value);
 						}
@@ -229,7 +231,11 @@ export default class RPCServer extends EventEmitter {
 					});
 				};
 
-				this.emit(isInvite ? "invite" : "guild-template", code, callback);
+				this.emit(
+					isInvite ? "invite" : "guild-template",
+					code,
+					callback,
+				);
 				break;
 			}
 

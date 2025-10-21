@@ -29,7 +29,10 @@ export default class WSServer {
 						fetch: (req, server) => {
 							const url = new URL(req.url);
 							const params = url.searchParams;
-							const ver = Number.parseInt(params.get("v") ?? "1", 10);
+							const ver = Number.parseInt(
+								params.get("v") ?? "1",
+								10,
+							);
 							const encoding = params.get("encoding") ?? "json";
 							const clientId = params.get("client_id") ?? "";
 							const origin = req.headers.get("origin") ?? "";
@@ -43,17 +46,23 @@ export default class WSServer {
 								].includes(origin)
 							) {
 								log("disallowed origin", origin);
-								return new Response("Disallowed origin", { status: 403 });
+								return new Response("Disallowed origin", {
+									status: 403,
+								});
 							}
 
 							if (encoding !== "json") {
 								log("unsupported encoding requested", encoding);
-								return new Response("Unsupported encoding", { status: 400 });
+								return new Response("Unsupported encoding", {
+									status: 400,
+								});
 							}
 
 							if (ver !== 1) {
 								log("unsupported version requested", ver);
-								return new Response("Unsupported version", { status: 400 });
+								return new Response("Unsupported version", {
+									status: 400,
+								});
 							}
 
 							const upgraded = server.upgrade(req, {
@@ -61,9 +70,12 @@ export default class WSServer {
 							});
 
 							if (!upgraded) {
-								return new Response("WebSocket upgrade failed", {
-									status: 400,
-								});
+								return new Response(
+									"WebSocket upgrade failed",
+									{
+										status: 400,
+									},
+								);
 							}
 
 							return undefined;
@@ -91,7 +103,8 @@ export default class WSServer {
 									origin: string;
 								}>,
 							) => {
-								const extSocket = ws as unknown as ExtendedWebSocket;
+								const extSocket =
+									ws as unknown as ExtendedWebSocket;
 								log("socket closed");
 								this.handlers.close(extSocket);
 							},
@@ -124,7 +137,11 @@ export default class WSServer {
 	}
 
 	onConnection(
-		ws: ServerWebSocket<{ clientId: string; encoding: string; origin: string }>,
+		ws: ServerWebSocket<{
+			clientId: string;
+			encoding: string;
+			origin: string;
+		}>,
 	): void {
 		const extSocket = ws as unknown as ExtendedWebSocket;
 		const { clientId, encoding } = ws.data;
@@ -150,7 +167,11 @@ export default class WSServer {
 	}
 
 	onMessage(
-		ws: ServerWebSocket<{ clientId: string; encoding: string; origin: string }>,
+		ws: ServerWebSocket<{
+			clientId: string;
+			encoding: string;
+			origin: string;
+		}>,
 		msg: Buffer | string,
 	): void {
 		const extSocket = ws as unknown as ExtendedWebSocket;

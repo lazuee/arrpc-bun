@@ -23,7 +23,11 @@ const SOCKET_PATH =
 	platform === "win32"
 		? "\\\\?\\pipe\\discord-ipc"
 		: resolve(
-				env.XDG_RUNTIME_DIR || env.TMPDIR || env.TMP || env.TEMP || "/tmp",
+				env.XDG_RUNTIME_DIR ||
+					env.TMPDIR ||
+					env.TMP ||
+					env.TEMP ||
+					"/tmp",
 				"discord-ipc",
 			);
 
@@ -74,7 +78,8 @@ const read = (socket: ExtendedSocket): void => {
 				break;
 
 			case IPCMessageType.FRAME:
-				if (!socket._handshook) throw new Error("need to handshake first");
+				if (!socket._handshook)
+					throw new Error("need to handshake first");
 				socket.emit("request", parsedData);
 				break;
 
@@ -115,7 +120,9 @@ const socketIsAvailable = async (socket: Socket): Promise<boolean> => {
 
 	const possibleOutcomes = Promise.race([
 		new Promise((res) => socket.on("error", res)),
-		new Promise((_res, rej) => socket.on("pong", () => rej("socket ponged"))),
+		new Promise((_res, rej) =>
+			socket.on("pong", () => rej("socket ponged")),
+		),
 		new Promise((_res, rej) =>
 			setTimeout(() => rej("timed out"), SOCKET_AVAILABILITY_TIMEOUT),
 		),
@@ -206,65 +213,69 @@ export default class IPCServer {
 				socket.end(
 					encode(IPCMessageType.CLOSE, {
 						code: IPCCloseCode.CLOSE_UNSUPPORTED,
-						message: e instanceof Error ? e.message : "Unknown error",
+						message:
+							e instanceof Error ? e.message : "Unknown error",
 					}),
 				);
 				socket.destroy();
 			}
 		});
 
-		socket.once("handshake", (params: { v?: string; client_id?: string }) => {
-			if (process.env.ARRPC_DEBUG) log("handshake:", params);
+		socket.once(
+			"handshake",
+			(params: { v?: string; client_id?: string }) => {
+				if (process.env.ARRPC_DEBUG) log("handshake:", params);
 
-			const ver = Number.parseInt(params.v ?? "1", 10);
-			const clientId = params.client_id ?? "";
+				const ver = Number.parseInt(params.v ?? "1", 10);
+				const clientId = params.client_id ?? "";
 
-			extSocket.close = (
-				code: number = IPCCloseCode.CLOSE_NORMAL,
-				message = "",
-			) => {
-				socket.end(
-					encode(IPCMessageType.CLOSE, {
-						code,
-						message,
-					}),
-				);
-				socket.destroy();
-			};
+				extSocket.close = (
+					code: number = IPCCloseCode.CLOSE_NORMAL,
+					message = "",
+				) => {
+					socket.end(
+						encode(IPCMessageType.CLOSE, {
+							code,
+							message,
+						}),
+					);
+					socket.destroy();
+				};
 
-			if (ver !== 1) {
-				log("unsupported version requested", ver);
-				extSocket.close?.(IPCErrorCode.INVALID_VERSION);
-				return;
-			}
+				if (ver !== 1) {
+					log("unsupported version requested", ver);
+					extSocket.close?.(IPCErrorCode.INVALID_VERSION);
+					return;
+				}
 
-			if (clientId === "") {
-				log("client id required");
-				extSocket.close?.(IPCErrorCode.INVALID_CLIENTID);
-				return;
-			}
+				if (clientId === "") {
+					log("client id required");
+					extSocket.close?.(IPCErrorCode.INVALID_CLIENTID);
+					return;
+				}
 
-			socket.on("error", (e) => {
-				log("socket error", e);
-			});
+				socket.on("error", (e) => {
+					log("socket error", e);
+				});
 
-			socket.on("close", (e) => {
-				log("socket closed", e);
-				this.handlers.close(extSocket);
-			});
+				socket.on("close", (e) => {
+					log("socket closed", e);
+					this.handlers.close(extSocket);
+				});
 
-			socket.on("request", this.onMessage.bind(this, extSocket));
+				socket.on("request", this.onMessage.bind(this, extSocket));
 
-			extSocket._send = extSocket.send;
-			extSocket.send = (msg: RPCMessage) => {
-				if (process.env.ARRPC_DEBUG) log("sending", msg);
-				socket.write(encode(IPCMessageType.FRAME, msg));
-			};
+				extSocket._send = extSocket.send;
+				extSocket.send = (msg: RPCMessage) => {
+					if (process.env.ARRPC_DEBUG) log("sending", msg);
+					socket.write(encode(IPCMessageType.FRAME, msg));
+				};
 
-			extSocket.clientId = clientId;
+				extSocket.clientId = clientId;
 
-			this.handlers.connection(extSocket);
-		});
+				this.handlers.connection(extSocket);
+			},
+		);
 	}
 
 	onMessage(socket: ExtendedSocket, msg: RPCMessage): void {

@@ -67,8 +67,10 @@
 		"formatter": {
 			"quoteStyle": "double",
 			"indentStyle": "tab",
+			"indentWidth": 4,
 			"lineEnding": "lf",
 			"semicolons": "always"
 		}
-	}
+	},
+	"root": true
 }
