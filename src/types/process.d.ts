@@ -5,7 +5,11 @@ export interface DetectableApp {
 		name: string;
 		is_launcher?: boolean;
 		arguments?: string;
+		os?: string;
 	}>;
+	aliases?: string[];
+	hook?: boolean;
+	[key: string]: unknown;
 }
 
 export type ProcessInfo = [number, string, string[]];

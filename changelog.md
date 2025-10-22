@@ -1,5 +1,23 @@
 # arRPC-Bun Changelog
 
+## v1.1.7 [21-10-2025]
+**Fixed Windows port binding detection and added OBS StreamerMode support**
+
+### Features
+- **Automatic OBS StreamerMode entry** - OBS is now automatically added to detectable apps
+  - When running `bun run update-db`, OBS is added with ID `STREAMERMODE`
+  - Supports Linux (`obs`), Windows (`obs.exe`), and macOS (`obs.app`)
+  - No need for manual patching or custom files
+  - Extended `DetectableApp` type to include `aliases`, `hook`, and `os` fields
+
+### Bug Fixes
+- **Fixed port binding detection on Windows** - Prevents false "port in use" errors
+  - Removed `error.message?.includes("EADDRINUSE")` check that caused false positives
+  - Now only checks `error.code === "EADDRINUSE"` for more accurate detection
+  - Fixes issue where all ports were incorrectly reported as taken on some Windows machines
+  - Added debug logging to help diagnose actual port binding failures
+  - Affects `src/bridge.ts` and `src/transports/websocket.ts`
+
 ## v1.1.6 [21-10-2025]
 **Native Win32 FFI implementation and enhanced type safety**
 

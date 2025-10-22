@@ -1,4 +1,4 @@
-import { createWriteStream, readFileSync } from "node:fs";
+import { createWriteStream, readFileSync, writeFileSync } from "node:fs";
 import { get } from "node:https";
 import { DETECTABLE_DB_PATH } from "../src/constants";
 import type { DetectableApp } from "../src/types/index.d.ts";
@@ -25,6 +25,28 @@ get("https://discord.com/api/v9/applications/detectable", (res) => {
 			const updated: DetectableApp[] = JSON.parse(
 				readFileSync(path, "utf8"),
 			);
+
+			const hasOBS = updated.some(
+				(app) => app.id === "STREAMERMODE" || app.name === "OBS",
+			);
+
+			if (!hasOBS) {
+				updated.push({
+					aliases: ["Obs"],
+					executables: [
+						{ is_launcher: false, name: "obs", os: "linux" },
+						{ is_launcher: false, name: "obs.exe", os: "win32" },
+						{ is_launcher: false, name: "obs.app", os: "darwin" },
+					],
+					hook: true,
+					id: "STREAMERMODE",
+					name: "OBS",
+				});
+
+				writeFileSync(path, JSON.stringify(updated, null, 2));
+				console.log("Added custom OBS StreamerMode entry");
+			}
+
 			console.log("Updated detectable DB");
 			console.log(
 				`${current.length} -> ${updated.length} games (+${updated.length - current.length})`,

@@ -72,10 +72,7 @@ export const init = (): void => {
 			break;
 		} catch (e) {
 			const error = e as { code?: string; message?: string };
-			if (
-				error.code === "EADDRINUSE" ||
-				error.message?.includes("EADDRINUSE")
-			) {
+			if (error.code === "EADDRINUSE") {
 				log(port, "in use!");
 				port++;
 				continue;
