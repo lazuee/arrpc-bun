@@ -1,6 +1,6 @@
 # arRPC-Bun Changelog
 
-## v1.1.7 [21-10-2025]
+## v1.1.8 [21-10-2025]
 **Fixed Windows port binding detection and added OBS StreamerMode support**
 
 ### Features
@@ -17,6 +17,20 @@
   - Fixes issue where all ports were incorrectly reported as taken on some Windows machines
   - Added debug logging to help diagnose actual port binding failures
   - Affects `src/bridge.ts` and `src/transports/websocket.ts`
+- **Fixed update-db script on first run** - No longer fails when detectable.json doesn't exist
+  - Checks if file exists before reading
+  - Creates file with empty array if missing
+
+### Improvements
+- **Migrated to Bun native APIs** - Replaced Node.js filesystem APIs with Bun equivalents
+  - `scripts/update_db.ts` - Using `Bun.file()`, `fetch()`, and `Bun.write()`
+  - `src/constants.ts` - Using `path.join()` for cross-platform path joining
+  - `src/process/index.ts` - Replaced `fs.readFileSync()` with `Bun.file().json()`
+  - `src/process/native/linux.ts` - Replaced `node:fs/promises` with `Bun.Glob` and `Bun.file()`
+  - `src/transports/ipc.ts` - Using `Bun.env` and `path.join()` for cross-platform paths
+  - Faster file operations and more idiomatic Bun code
+  - Kept `node:net` for IPC (required for Unix/Windows named pipes)
+  - Proper cross-platform path handling for Windows and Linux
 
 ## v1.1.6 [21-10-2025]
 **Native Win32 FFI implementation and enhanced type safety**

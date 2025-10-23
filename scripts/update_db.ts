@@ -1,10 +1,13 @@
+import { file, write } from "bun";
 import { DETECTABLE_DB_PATH } from "../src/constants";
 import type { DetectableApp } from "../src/types/index.d.ts";
 
 const path = DETECTABLE_DB_PATH;
 
-const currentFile = Bun.file(path);
-const current: DetectableApp[] = await currentFile.json();
+const currentFile = file(path);
+const current: DetectableApp[] = (await currentFile.exists())
+	? await currentFile.json()
+	: [];
 
 const response = await fetch(
 	"https://discord.com/api/v9/applications/detectable",
@@ -17,26 +20,39 @@ if (!response.ok) {
 
 const updated = (await response.json()) as DetectableApp[];
 
-const hasOBS = updated.some(
+const hasOBSInCurrent = current.some(
 	(app) => app.id === "STREAMERMODE" || app.name === "OBS",
 );
 
-if (!hasOBS) {
-	updated.push({
-		aliases: ["Obs"],
-		executables: [
-			{ is_launcher: false, name: "obs", os: "linux" },
-			{ is_launcher: false, name: "obs.exe", os: "win32" },
-			{ is_launcher: false, name: "obs.app", os: "darwin" },
-		],
-		hook: true,
-		id: "STREAMERMODE",
-		name: "OBS",
-	});
-	console.log("Added custom OBS StreamerMode entry");
+const hasOBSInUpdated = updated.some(
+	(app) => app.id === "STREAMERMODE" || app.name === "OBS",
+);
+
+if (!hasOBSInUpdated) {
+	if (hasOBSInCurrent) {
+		const obsEntry = current.find(
+			(app) => app.id === "STREAMERMODE" || app.name === "OBS",
+		);
+		if (obsEntry) {
+			updated.push(obsEntry);
+		}
+	} else {
+		updated.push({
+			aliases: ["Obs"],
+			executables: [
+				{ is_launcher: false, name: "obs", os: "linux" },
+				{ is_launcher: false, name: "obs.exe", os: "win32" },
+				{ is_launcher: false, name: "obs.app", os: "darwin" },
+			],
+			hook: true,
+			id: "STREAMERMODE",
+			name: "OBS",
+		});
+		console.log("Added custom OBS StreamerMode entry");
+	}
 }
 
-await Bun.write(path, JSON.stringify(updated, null, 2));
+await write(path, JSON.stringify(updated, null, 2));
 
 console.log("Updated detectable DB");
 console.log(

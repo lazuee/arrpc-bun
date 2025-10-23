@@ -1,11 +1,11 @@
-import { resolve } from "node:path";
+import { join } from "node:path";
 
 export const BRIDGE_PORT_RANGE: [number, number] = [1337, 1347];
 export const WEBSOCKET_PORT_RANGE: [number, number] = [6463, 6472];
 export const PROCESS_SCAN_INTERVAL = 5000;
 export const IPC_MAX_RETRIES = 9;
 export const SOCKET_AVAILABILITY_TIMEOUT = 1000;
-export const DETECTABLE_DB_PATH = resolve(
+export const DETECTABLE_DB_PATH = join(
 	import.meta.dirname,
 	"..",
 	"detectable.json",

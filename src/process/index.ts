@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import { file } from "bun";
 import { DETECTABLE_DB_PATH, PROCESS_SCAN_INTERVAL } from "../constants";
 import type {
 	DetectableApp,
@@ -12,9 +12,7 @@ import * as Natives from "./native/index";
 
 const log = createLogger("process", 237, 66, 69);
 
-const DetectableDB = JSON.parse(
-	fs.readFileSync(DETECTABLE_DB_PATH, "utf8"),
-) as DetectableApp[];
+const DetectableDB = (await file(DETECTABLE_DB_PATH).json()) as DetectableApp[];
 
 type Native = {
 	getProcesses: () => Promise<Array<[number, string, string[]]>>;

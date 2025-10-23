@@ -1,4 +1,4 @@
-import type { ServerWebSocket } from "bun";
+import { type Server, type ServerWebSocket, serve } from "bun";
 import { BRIDGE_PORT_RANGE } from "./constants";
 import type { ActivityPayload } from "./types";
 import { createLogger } from "./utils";
@@ -29,13 +29,13 @@ export const init = (): void => {
 	}
 
 	let port = startPort;
-	let server: ReturnType<typeof Bun.serve> | undefined;
+	let server: Server<unknown> | undefined;
 
 	while (port <= BRIDGE_PORT_RANGE[1]) {
 		if (process.env.ARRPC_DEBUG) log("trying port", port);
 
 		try {
-			server = Bun.serve({
+			server = serve({
 				port,
 				fetch(req, srv) {
 					const upgraded = srv.upgrade(req, { data: {} });

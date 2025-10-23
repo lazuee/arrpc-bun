@@ -5,8 +5,8 @@ import {
 	type Server,
 	type Socket,
 } from "node:net";
-import { resolve } from "node:path";
-import { env, platform } from "node:process";
+import { join } from "node:path";
+import { env } from "bun";
 import {
 	IPC_MAX_RETRIES,
 	IPCCloseCode,
@@ -20,9 +20,9 @@ import { createLogger } from "../utils";
 const log = createLogger("ipc", 254, 231, 92);
 
 const SOCKET_PATH =
-	platform === "win32"
+	process.platform === "win32"
 		? "\\\\?\\pipe\\discord-ipc"
-		: resolve(
+		: join(
 				env.XDG_RUNTIME_DIR ||
 					env.TMPDIR ||
 					env.TMP ||
@@ -157,7 +157,7 @@ const getAvailableSocket = async (tries = 0): Promise<string> => {
 	if (process.env.ARRPC_DEBUG) log("checking", path);
 
 	if (await socketIsAvailable(socket)) {
-		if (platform !== "win32") {
+		if (process.platform !== "win32") {
 			try {
 				unlinkSync(path);
 			} catch (e: unknown) {

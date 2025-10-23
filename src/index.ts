@@ -4,7 +4,15 @@ import * as Bridge from "./bridge";
 import Server from "./server";
 import { log } from "./utils";
 
-log("arRPC-Bun v1.1.6");
+let version = "unknown";
+try {
+	const pkg = await import("../package.json", { with: { type: "json" } });
+	version = pkg.default.version;
+} catch {
+	version = "unknown";
+}
+
+log(`arRPC-Bun v${version}`);
 
 Bridge.init();
 

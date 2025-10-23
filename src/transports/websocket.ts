@@ -1,4 +1,4 @@
-import type { ServerWebSocket } from "bun";
+import { type Server, type ServerWebSocket, serve } from "bun";
 import { WEBSOCKET_PORT_RANGE } from "../constants";
 import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
 import { createLogger } from "../utils";
@@ -7,7 +7,7 @@ const log = createLogger("websocket", 235, 69, 158);
 
 export default class WSServer {
 	private handlers!: Handlers;
-	private server?: ReturnType<typeof Bun.serve>;
+	private server?: Server<unknown>;
 
 	constructor(handlers: Handlers) {
 		return (async () => {
@@ -17,13 +17,13 @@ export default class WSServer {
 			this.onMessage = this.onMessage.bind(this);
 
 			let port = WEBSOCKET_PORT_RANGE[0];
-			let server: ReturnType<typeof Bun.serve> | undefined;
+			let server: Server<unknown> | undefined;
 
 			while (port <= WEBSOCKET_PORT_RANGE[1]) {
 				if (process.env.ARRPC_DEBUG) log("trying port", port);
 
 				try {
-					server = Bun.serve({
+					server = serve({
 						port,
 						hostname: "127.0.0.1",
 						fetch: (req, server) => {

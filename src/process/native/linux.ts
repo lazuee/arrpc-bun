@@ -1,16 +1,18 @@
-import { readdir, readFile } from "node:fs/promises";
+import { file, Glob } from "bun";
 import type { ProcessInfo } from "../../types";
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
-	const pids = await readdir("/proc");
+	const procDir = await Array.fromAsync(
+		new Glob("*").scan({ cwd: "/proc", onlyFiles: false }),
+	);
 
 	const processes = await Promise.all(
-		pids.map(async (pid) => {
+		procDir.map(async (pid) => {
 			const pidNum = Number.parseInt(pid, 10);
 			if (pidNum <= 0) return null;
 
 			try {
-				const cmdline = await readFile(`/proc/${pid}/cmdline`, "utf8");
+				const cmdline = await file(`/proc/${pid}/cmdline`).text();
 				const parts = cmdline.split("\0");
 				const path = parts[0];
 				if (!path) return null;
