@@ -6,7 +6,7 @@
   <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <h3>An open implementation of Discord's local RPC servers</h3>
   <h4>Allowing RPC where it was otherwise impossible, like Discord Web and custom clients</h4>
-  <h5>TypeScript + Bun Port • v1.1.8</h5>
+  <h5>TypeScript + Bun Port • v1.1.9</h5>
 </div>
 
 <br>
@@ -113,12 +113,19 @@ Then just use apps with Discord RPC like normal and they *should* work!
 arRPC can be configured using environment variables:
 
 - `ARRPC_BRIDGE_PORT` - WebSocket bridge starting port (default: 1337, tries 1337-1347 if in use)
+- `ARRPC_BRIDGE_HOST` - Hostname for bridge WebSocket server (default: `127.0.0.1`)
+- `ARRPC_WEBSOCKET_HOST` - Hostname for RPC WebSocket server (default: `127.0.0.1`)
 - `ARRPC_DEBUG` - Enable debug logging (set to any value to enable)
 - `ARRPC_NO_PROCESS_SCANNING` - Disable automatic game detection (set to any value to disable)
 
 Example:
 ```bash
 ARRPC_DEBUG=1 ARRPC_BRIDGE_PORT=6969 bun start
+```
+
+For security, both servers bind to `127.0.0.1` (localhost only) by default. To allow external connections:
+```bash
+ARRPC_BRIDGE_HOST=0.0.0.0 ARRPC_WEBSOCKET_HOST=0.0.0.0 bun start
 ```
 
 ### Port Ranges

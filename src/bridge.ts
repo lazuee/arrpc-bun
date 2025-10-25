@@ -28,6 +28,8 @@ export const init = (): void => {
 		startPort = envPort;
 	}
 
+	const hostname = process.env.ARRPC_BRIDGE_HOST || "127.0.0.1";
+
 	let port = startPort;
 	let server: Server<unknown> | undefined;
 
@@ -37,6 +39,7 @@ export const init = (): void => {
 		try {
 			server = serve({
 				port,
+				hostname,
 				fetch(req, srv) {
 					const upgraded = srv.upgrade(req, { data: {} });
 					if (!upgraded) {

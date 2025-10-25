@@ -16,6 +16,8 @@ export default class WSServer {
 			this.onConnection = this.onConnection.bind(this);
 			this.onMessage = this.onMessage.bind(this);
 
+			const hostname = process.env.ARRPC_WEBSOCKET_HOST || "127.0.0.1";
+
 			let port = WEBSOCKET_PORT_RANGE[0];
 			let server: Server<unknown> | undefined;
 
@@ -25,7 +27,7 @@ export default class WSServer {
 				try {
 					server = serve({
 						port,
-						hostname: "127.0.0.1",
+						hostname,
 						fetch: (req, server) => {
 							const url = new URL(req.url);
 							const params = url.searchParams;
