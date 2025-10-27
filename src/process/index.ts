@@ -21,7 +21,11 @@ const NativeImpl = (Natives as Record<string, Native>)[process.platform] as
 	| undefined;
 
 function matchesExecutable(
-	executable: { name: string; is_launcher?: boolean; arguments?: string },
+	executable: {
+		name: string;
+		is_launcher?: boolean;
+		arguments?: string;
+	},
 	toCompare: string[],
 	args: string[] | null,
 	checkLauncher: boolean,
