@@ -1,84 +1,95 @@
 import type { ProcessInfo } from "../../types";
-import { exists } from "node:fs/promises";
+
+function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
+	const appIndex = cmdline.toLowerCase().indexOf(".app");
+	if (appIndex !== -1) {
+		let pathEnd = appIndex + 4;
+
+		if (cmdline.substring(pathEnd).startsWith("/Contents/MacOS/")) {
+			const contentsMacosStart = pathEnd + "/Contents/MacOS/".length;
+			let foundArgStart = false;
+
+			for (let i = contentsMacosStart; i < cmdline.length; i++) {
+				if (cmdline[i] === " ") {
+					const nextNonSpace = cmdline.substring(i).trim();
+					if (
+						nextNonSpace.startsWith("-") ||
+						nextNonSpace.startsWith("+") ||
+						nextNonSpace === ""
+					) {
+						pathEnd = i;
+						foundArgStart = true;
+						break;
+					}
+				}
+			}
+
+			if (!foundArgStart) {
+				pathEnd = cmdline.length;
+			}
+		}
+
+		// extract just the .app bundle path (not the full Contents/MacOS/... path)
+		const appPath = cmdline.substring(0, appIndex + 4); // Just up to .app
+		const restOfLine = cmdline.substring(pathEnd).trim();
+		const args = restOfLine ? restOfLine.split(/\s+/) : [];
+
+		return { exe: appPath, args };
+	}
+
+	//simple whitespace split for non-.app executables
+	const parts = cmdline.split(/\s+/).filter(Boolean);
+	if (parts.length === 0) {
+		return { exe: "", args: [] };
+	}
+
+	const exe = parts[0] as string;
+	const args = parts.slice(1);
+
+	return { exe, args };
+}
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
-  try {
-    const proc = Bun.spawn(["ps", "-awwxo", "pid=,args="]);
-    const output = await new Response(proc.stdout).text();
-    const lines = output.split("\n");
+	try {
+		const proc = Bun.spawn(["ps", "-awwxo", "pid=,args="]);
+		const output = await new Response(proc.stdout).text();
+		const lines = output.split("\n");
 
-    const processes = await Promise.all(
-      lines.map(async (line): Promise<ProcessInfo | null> => {
-        const trimmedLine = line.trim();
-        if (!trimmedLine) return null;
+		const processes: ProcessInfo[] = [];
 
-        const firstSpaceIndex = trimmedLine.indexOf(" ");
-        if (firstSpaceIndex === -1) return null;
+		for (const line of lines) {
+			const trimmedLine = line.trim();
+			if (!trimmedLine) continue;
 
-        const pidNum = Number.parseInt(trimmedLine.substring(0, firstSpaceIndex), 10);
-        const cmdline = trimmedLine.substring(firstSpaceIndex).trim();
+			const firstSpaceIndex = trimmedLine.indexOf(" ");
+			if (firstSpaceIndex === -1) continue;
 
-        if (isNaN(pidNum) || pidNum <= 0) return null;
-        if (!cmdline || cmdline.startsWith("[") || cmdline.startsWith("<")) {
-          return null;
-        }
+			const pidNum = Number.parseInt(
+				trimmedLine.substring(0, firstSpaceIndex),
+				10,
+			);
+			const cmdline = trimmedLine.substring(firstSpaceIndex).trim();
 
-        let exePath: string | undefined;
-        let args: string[] = [];
-        let foundPath = false;
+			if (Number.isNaN(pidNum) || pidNum <= 0) continue;
 
-        try {
-          if (await exists(cmdline)) {
-            exePath = cmdline;
-            foundPath = true;
-          }
-        } catch {}
+			// filter out kernel processes and empty commands
+			if (
+				!cmdline ||
+				cmdline.startsWith("[") ||
+				cmdline.startsWith("<")
+			) {
+				continue;
+			}
 
-        if (!foundPath && cmdline.startsWith("/")) {
-          let lastSpaceIdx = cmdline.lastIndexOf(" ");
-          while (lastSpaceIdx > 0) {
-            const potentialPath = cmdline.substring(0, lastSpaceIdx);
-            try {
-              if (await exists(potentialPath)) {
-                exePath = potentialPath;
-                args = cmdline
-                  .substring(lastSpaceIdx + 1)
-                  .trim()
-                  .split(/\s+/)
-                  .filter(Boolean);
-                foundPath = true;
-                break;
-              }
-            } catch {}
+			const { exe, args } = parseCommandLine(cmdline);
 
-            lastSpaceIdx = cmdline.lastIndexOf(" ", lastSpaceIdx - 1);
-          }
-        }
+			if (!exe) continue;
 
-        if (!foundPath) {
-          const parts = cmdline.split(/\s+/).filter(Boolean);
-          if (parts.length > 0) {
-            exePath = parts[0];
-            args = parts.slice(1);
-          }
-        }
+			processes.push([pidNum, exe, args]);
+		}
 
-        if (exePath) {
-          const appIndex = exePath.indexOf(".app/");
-          if (appIndex !== -1) {
-            const appEndIndex = appIndex + 4;
-            exePath = exePath.substring(0, appEndIndex);
-          }
-
-          return [pidNum, exePath, args] as ProcessInfo;
-        }
-
-        return null;
-      }),
-    );
-
-    return processes.filter((x): x is ProcessInfo => x !== null);
-  } catch {
-    return [];
-  }
+		return processes;
+	} catch {
+		return [];
+	}
 }
