@@ -27,7 +27,7 @@ import { createLogger } from "../utils";
 
 const log = createLogger("ipc", ...IPC_COLOR);
 
-const SOCKET_PATH =
+const getSocketPath = (): string =>
 	process.platform === "win32"
 		? WINDOWS_IPC_PIPE_PATH
 		: join(
@@ -160,7 +160,7 @@ const getAvailableSocket = async (tries = 0): Promise<string> => {
 		throw new Error(`ran out of tries to find socket ${tries}`);
 	}
 
-	const path = `${SOCKET_PATH}-${tries}`;
+	const path = `${getSocketPath()}-${tries}`;
 	const socket = createConnection(path);
 
 	if (process.env[ENV_DEBUG]) log("checking", path);

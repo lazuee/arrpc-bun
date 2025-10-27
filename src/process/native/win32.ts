@@ -1,8 +1,9 @@
 import { dlopen, FFIType, type Pointer, suffix } from "bun:ffi";
+import { PROCESS_COLOR } from "../../constants";
 import type { ProcessInfo } from "../../types";
 import { createLogger } from "../../utils";
 
-const log = createLogger("process:win32", 237, 66, 69);
+const log = createLogger("process:win32", ...PROCESS_COLOR);
 
 const TH32CS_SNAPPROCESS = 0x00000002;
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
