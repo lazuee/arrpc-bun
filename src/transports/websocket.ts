@@ -152,8 +152,10 @@ export default class WSServer {
 		extSocket.clientId = clientId;
 		extSocket.encoding = encoding;
 
+		const originalSend = ws.send.bind(ws);
+
 		extSocket._send = (data: string | Buffer) => {
-			ws.send(typeof data === "string" ? data : data.toString());
+			originalSend(typeof data === "string" ? data : data.toString());
 		};
 
 		extSocket.send = (msg: RPCMessage | string) => {
