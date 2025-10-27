@@ -7,8 +7,10 @@ import {
 	RPC_PROTOCOL_VERSION,
 	WEBSOCKET_COLOR,
 	WEBSOCKET_PORT_RANGE,
+	WEBSOCKET_PORT_RANGE_HYPERV,
 	WS_DEFAULT_ENCODING,
 } from "../constants";
+import { isHyperVEnabled } from "../platform";
 import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
 import { createLogger } from "../utils";
 
@@ -30,12 +32,21 @@ export default class WSServer {
 		this.onConnection = this.onConnection.bind(this);
 		this.onMessage = this.onMessage.bind(this);
 
+		const useHyperVRange = isHyperVEnabled();
+		const portRange = useHyperVRange
+			? WEBSOCKET_PORT_RANGE_HYPERV
+			: WEBSOCKET_PORT_RANGE;
+
+		if (useHyperVRange) {
+			log("Hyper-V detected, using extended port range");
+		}
+
 		const hostname = env[ENV_WEBSOCKET_HOST] || DEFAULT_LOCALHOST;
 
-		let port = WEBSOCKET_PORT_RANGE[0];
+		let port = portRange[0];
 		let server: Server<unknown> | undefined;
 
-		while (port <= WEBSOCKET_PORT_RANGE[1]) {
+		while (port <= portRange[1]) {
 			if (env[ENV_DEBUG]) log("trying port", port);
 
 			try {
@@ -121,7 +132,9 @@ export default class WSServer {
 		}
 
 		if (!this.server) {
-			throw new Error("Failed to find available port");
+			throw new Error(
+				`Failed to start WebSocket server - all ports in range ${portRange[0]}-${portRange[1]} are in use`,
+			);
 		}
 	}
 

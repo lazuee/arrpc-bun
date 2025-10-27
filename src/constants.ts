@@ -13,7 +13,9 @@ export const CLI_ARG_NO_PROCESS_SCANNING = "--no-process-scanning";
 
 // network
 export const BRIDGE_PORT_RANGE: [number, number] = [1337, 1347];
+export const BRIDGE_PORT_RANGE_HYPERV: [number, number] = [60000, 60020];
 export const WEBSOCKET_PORT_RANGE: [number, number] = [6463, 6472];
+export const WEBSOCKET_PORT_RANGE_HYPERV: [number, number] = [60100, 60120];
 export const DEFAULT_LOCALHOST = "127.0.0.1";
 
 // IPC

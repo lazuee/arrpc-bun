@@ -2,12 +2,14 @@ import { env, type Server, type ServerWebSocket, serve } from "bun";
 import {
 	BRIDGE_COLOR,
 	BRIDGE_PORT_RANGE,
+	BRIDGE_PORT_RANGE_HYPERV,
 	DEFAULT_LOCALHOST,
 	ENV_BRIDGE_HOST,
 	ENV_BRIDGE_PORT,
 	ENV_DEBUG,
 	ENV_NO_BRIDGE,
 } from "./constants";
+import { isHyperVEnabled } from "./platform";
 import type { ActivityPayload } from "./types";
 import { createLogger } from "./utils";
 
@@ -37,7 +39,16 @@ export async function init(): Promise<void> {
 		return;
 	}
 
-	let startPort = BRIDGE_PORT_RANGE[0];
+	const useHyperVRange = isHyperVEnabled();
+	const portRange = useHyperVRange
+		? BRIDGE_PORT_RANGE_HYPERV
+		: BRIDGE_PORT_RANGE;
+
+	if (useHyperVRange) {
+		log("Hyper-V detected, using extended port range");
+	}
+
+	let startPort = portRange[0];
 	if (env[ENV_BRIDGE_PORT]) {
 		const envPort = Number.parseInt(env[ENV_BRIDGE_PORT], 10);
 		if (Number.isNaN(envPort)) {
@@ -51,7 +62,7 @@ export async function init(): Promise<void> {
 	let port = startPort;
 	let server: Server<unknown> | undefined;
 
-	while (port <= BRIDGE_PORT_RANGE[1]) {
+	while (port <= portRange[1]) {
 		if (env[ENV_DEBUG]) log("trying port", port);
 
 		try {
@@ -105,7 +116,7 @@ export async function init(): Promise<void> {
 
 	if (!server) {
 		throw new Error(
-			`Failed to start bridge server - all ports in range ${BRIDGE_PORT_RANGE[0]}-${BRIDGE_PORT_RANGE[1]} are in use`,
+			`Failed to start bridge server - all ports in range ${portRange[0]}-${portRange[1]} are in use`,
 		);
 	}
 }
