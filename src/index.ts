@@ -1,9 +1,8 @@
 import { env } from "bun";
 import { init as initBridge, send as sendToBridge } from "./bridge";
+import { DEFAULT_VERSION, ENV_DEBUG } from "./constants";
 import Server from "./server";
 import { log } from "./utils";
-
-import { DEFAULT_VERSION, ENV_DEBUG } from "./constants";
 
 let version = DEFAULT_VERSION;
 try {

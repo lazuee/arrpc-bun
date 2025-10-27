@@ -13,3 +13,7 @@ export interface DetectableApp {
 }
 
 export type ProcessInfo = [number, string, string[]];
+
+export interface Native {
+	getProcesses: () => Promise<ProcessInfo[]>;
+}

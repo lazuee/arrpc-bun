@@ -1,7 +1,4 @@
 import { env, type Server, type ServerWebSocket, serve } from "bun";
-import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
-import { createLogger } from "../utils";
-
 import {
 	ALLOWED_DISCORD_ORIGINS,
 	DEFAULT_LOCALHOST,
@@ -12,6 +9,8 @@ import {
 	WEBSOCKET_PORT_RANGE,
 	WS_DEFAULT_ENCODING,
 } from "../constants";
+import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
+import { createLogger } from "../utils";
 
 const log = createLogger("websocket", ...WEBSOCKET_COLOR);
 

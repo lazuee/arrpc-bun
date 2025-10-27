@@ -1,7 +1,4 @@
 import { env, type Server, type ServerWebSocket, serve } from "bun";
-import type { ActivityPayload } from "./types";
-import { createLogger } from "./utils";
-
 import {
 	BRIDGE_COLOR,
 	BRIDGE_PORT_RANGE,
@@ -11,6 +8,8 @@ import {
 	ENV_DEBUG,
 	ENV_NO_BRIDGE,
 } from "./constants";
+import type { ActivityPayload } from "./types";
+import { createLogger } from "./utils";
 
 const log = createLogger("bridge", ...BRIDGE_COLOR);
 

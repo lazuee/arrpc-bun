@@ -1,20 +1,20 @@
 import { file } from "bun";
+import {
+	EXECUTABLE_ARCH_SUFFIXES,
+	EXECUTABLE_EXACT_MATCH_PREFIX,
+	getDetectableDbPath,
+	PROCESS_COLOR,
+	PROCESS_SCAN_INTERVAL,
+} from "../constants";
 import type {
 	DetectableApp,
 	ExtendedSocket,
 	ExtendedWebSocket,
 	Handlers,
+	Native,
 } from "../types";
 import { createLogger } from "../utils";
 import * as Natives from "./native/index";
-
-import {
-	EXECUTABLE_ARCH_SUFFIXES,
-	EXECUTABLE_EXACT_MATCH_PREFIX,
-	PROCESS_COLOR,
-	PROCESS_SCAN_INTERVAL,
-	getDetectableDbPath,
-} from "../constants";
 
 const log = createLogger("process", ...PROCESS_COLOR);
 
@@ -22,11 +22,7 @@ const DetectableDB = (await file(
 	getDetectableDbPath(),
 ).json()) as DetectableApp[];
 
-type Native = {
-	getProcesses: () => Promise<Array<[number, string, string[]]>>;
-};
-
-const Native = (Natives as Record<string, Native>)[process.platform] as
+const NativeImpl = (Natives as Record<string, Native>)[process.platform] as
 	| Native
 	| undefined;
 
@@ -38,7 +34,7 @@ export default class ProcessServer {
 	private handlers!: Handlers;
 
 	constructor(handlers: Handlers) {
-		if (!Native) return;
+		if (!NativeImpl) return;
 
 		this.handlers = handlers;
 		this.scan = this.scan.bind(this);
@@ -50,9 +46,9 @@ export default class ProcessServer {
 	}
 
 	async scan(): Promise<void> {
-		if (!Native) return;
+		if (!NativeImpl) return;
 
-		const processes = await Native.getProcesses();
+		const processes = await NativeImpl.getProcesses();
 		const ids: string[] = [];
 
 		for (const [pid, _path, args] of processes) {

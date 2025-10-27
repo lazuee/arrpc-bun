@@ -1,7 +1,6 @@
 import { file, Glob } from "bun";
-import type { ProcessInfo } from "../../types";
-
 import { CMDLINE_NULL_SEPARATOR, LINUX_PROC_DIR } from "../../constants";
+import type { ProcessInfo } from "../../types";
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
 	const procDir = await Array.fromAsync(

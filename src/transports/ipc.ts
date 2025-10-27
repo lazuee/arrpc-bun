@@ -1,15 +1,7 @@
 import { unlinkSync } from "node:fs";
-import {
-	createConnection,
-	createServer,
-	type Server,
-	type Socket,
-} from "node:net";
+import { createConnection, createServer, type Socket } from "node:net";
 import { join } from "node:path";
 import { env } from "bun";
-import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
-import { createLogger } from "../utils";
-
 import {
 	ENV_DEBUG,
 	IPC_COLOR,
@@ -25,6 +17,8 @@ import {
 	UNIX_TEMP_DIR_FALLBACK,
 	WINDOWS_IPC_PIPE_PATH,
 } from "../constants";
+import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
+import { createLogger } from "../utils";
 
 const log = createLogger("ipc", ...IPC_COLOR);
 

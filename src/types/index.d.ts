@@ -12,4 +12,4 @@ export type {
 	ExtendedWebSocket,
 	Handlers,
 } from "./socket.d.ts";
-export type { DetectableApp, ProcessInfo } from "./process.d.ts";
+export type { DetectableApp, Native, ProcessInfo } from "./process.d.ts";

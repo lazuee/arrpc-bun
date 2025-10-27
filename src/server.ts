@@ -1,10 +1,5 @@
 import { EventEmitter } from "node:events";
 import { env } from "bun";
-import ProcessServer from "./process/index";
-import IPCServer from "./transports/ipc";
-import WSServer from "./transports/websocket";
-import { createLogger } from "./utils";
-
 import {
 	ACTIVITY_FLAG_INSTANCE,
 	ActivityType,
@@ -23,7 +18,9 @@ import {
 	SERVER_COLOR,
 	TIMESTAMP_PRECISION_THRESHOLD,
 } from "./constants";
-
+import ProcessServer from "./process/index";
+import IPCServer from "./transports/ipc";
+import WSServer from "./transports/websocket";
 import type {
 	ActivityPayload,
 	ExtendedSocket,
@@ -33,6 +30,7 @@ import type {
 	RPCMessage,
 	SetActivityArgs,
 } from "./types";
+import { createLogger } from "./utils";
 
 const log = createLogger("server", ...SERVER_COLOR);
 
