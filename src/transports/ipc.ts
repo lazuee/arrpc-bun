@@ -7,6 +7,9 @@ import {
 } from "node:net";
 import { join } from "node:path";
 import { env } from "bun";
+import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
+import { createLogger } from "../utils";
+
 import {
 	ENV_DEBUG,
 	IPC_COLOR,
@@ -22,13 +25,11 @@ import {
 	UNIX_TEMP_DIR_FALLBACK,
 	WINDOWS_IPC_PIPE_PATH,
 } from "../constants";
-import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
-import { createLogger } from "../utils";
 
 const log = createLogger("ipc", ...IPC_COLOR);
 
-const getSocketPath = (): string =>
-	process.platform === "win32"
+function getSocketPath(): string {
+	return process.platform === "win32"
 		? WINDOWS_IPC_PIPE_PATH
 		: join(
 				env.XDG_RUNTIME_DIR ||
@@ -38,10 +39,11 @@ const getSocketPath = (): string =>
 					UNIX_TEMP_DIR_FALLBACK,
 				IPC_SOCKET_NAME,
 			);
+}
 
 let uniqueId = 0;
 
-const encode = (type: number, data: unknown): Buffer => {
+function encode(type: number, data: unknown): Buffer {
 	const dataStr = JSON.stringify(data);
 	const dataSize = Buffer.byteLength(dataStr);
 
@@ -51,9 +53,9 @@ const encode = (type: number, data: unknown): Buffer => {
 	buf.write(dataStr, IPC_HEADER_SIZE, dataSize);
 
 	return buf;
-};
+}
 
-const read = (socket: ExtendedSocket): void => {
+function read(socket: ExtendedSocket): void {
 	while (true) {
 		let resp = socket.read(IPC_HEADER_SIZE);
 		if (!resp) return;
@@ -98,9 +100,9 @@ const read = (socket: ExtendedSocket): void => {
 				return;
 		}
 	}
-};
+}
 
-const socketIsAvailable = async (socket: Socket): Promise<boolean> => {
+async function socketIsAvailable(socket: Socket): Promise<boolean> {
 	socket.pause();
 	socket.on("readable", () => {
 		try {
@@ -123,7 +125,7 @@ const socketIsAvailable = async (socket: Socket): Promise<boolean> => {
 			socket.end();
 			socket.destroy();
 		} catch (e: unknown) {
-			if (process.env[ENV_DEBUG]) log("error stopping socket", e);
+			if (env[ENV_DEBUG]) log("error stopping socket", e);
 		}
 	};
 
@@ -144,7 +146,7 @@ const socketIsAvailable = async (socket: Socket): Promise<boolean> => {
 
 	const outcome = await possibleOutcomes;
 	stop();
-	if (process.env[ENV_DEBUG]) {
+	if (env[ENV_DEBUG]) {
 		log(
 			"checked if socket is available:",
 			outcome === true,
@@ -153,9 +155,9 @@ const socketIsAvailable = async (socket: Socket): Promise<boolean> => {
 	}
 
 	return outcome === true;
-};
+}
 
-const getAvailableSocket = async (tries = 0): Promise<string> => {
+async function getAvailableSocket(tries = 0): Promise<string> {
 	if (tries > IPC_MAX_RETRIES) {
 		throw new Error(`ran out of tries to find socket ${tries}`);
 	}
@@ -163,14 +165,14 @@ const getAvailableSocket = async (tries = 0): Promise<string> => {
 	const path = `${getSocketPath()}-${tries}`;
 	const socket = createConnection(path);
 
-	if (process.env[ENV_DEBUG]) log("checking", path);
+	if (env[ENV_DEBUG]) log("checking", path);
 
 	if (await socketIsAvailable(socket)) {
 		if (process.platform !== "win32") {
 			try {
 				unlinkSync(path);
 			} catch (e: unknown) {
-				if (process.env[ENV_DEBUG]) log("error unlinking socket", e);
+				if (env[ENV_DEBUG]) log("error unlinking socket", e);
 			}
 		}
 		return path;
@@ -178,34 +180,35 @@ const getAvailableSocket = async (tries = 0): Promise<string> => {
 
 	log(`not available, trying again (attempt ${tries + 1})`);
 	return getAvailableSocket(tries + 1);
-};
+}
 
 export default class IPCServer {
 	private handlers!: Handlers;
 	private server?: Server;
 
-	constructor(handlers: Handlers) {
-		return new Promise((res) => {
-			(async () => {
-				this.handlers = handlers;
+	private constructor() {}
 
-				this.onConnection = this.onConnection.bind(this);
-				this.onMessage = this.onMessage.bind(this);
+	static async create(handlers: Handlers): Promise<IPCServer> {
+		const ipcServer = new IPCServer();
+		ipcServer.handlers = handlers;
 
-				const server = createServer(this.onConnection);
-				server.on("error", (e) => {
-					log("server error", e);
-				});
+		ipcServer.onConnection = ipcServer.onConnection.bind(ipcServer);
+		ipcServer.onMessage = ipcServer.onMessage.bind(ipcServer);
 
-				const socketPath = await getAvailableSocket();
-				server.listen(socketPath, () => {
-					log("listening at", socketPath);
-					this.server = server;
+		const server = createServer(ipcServer.onConnection);
+		server.on("error", (e) => {
+			log("server error", e);
+		});
 
-					res(this as unknown as IPCServer);
-				});
-			})();
-		}) as unknown as IPCServer;
+		const socketPath = await getAvailableSocket();
+
+		return new Promise((resolve) => {
+			server.listen(socketPath, () => {
+				log("listening at", socketPath);
+				ipcServer.server = server;
+				resolve(ipcServer);
+			});
+		});
 	}
 
 	onConnection(socket: Socket): void {
@@ -233,7 +236,7 @@ export default class IPCServer {
 		socket.once(
 			"handshake",
 			(params: { v?: string; client_id?: string }) => {
-				if (process.env[ENV_DEBUG]) log("handshake:", params);
+				if (env[ENV_DEBUG]) log("handshake:", params);
 
 				const ver = Number.parseInt(
 					params.v ?? String(RPC_PROTOCOL_VERSION),
@@ -279,7 +282,7 @@ export default class IPCServer {
 
 				extSocket._send = extSocket.send;
 				extSocket.send = (msg: RPCMessage) => {
-					if (process.env[ENV_DEBUG]) log("sending", msg);
+					if (env[ENV_DEBUG]) log("sending", msg);
 					socket.write(encode(IPCMessageType.FRAME, msg));
 				};
 
@@ -291,7 +294,7 @@ export default class IPCServer {
 	}
 
 	onMessage(socket: ExtendedSocket, msg: RPCMessage): void {
-		if (process.env[ENV_DEBUG]) log("message", msg);
+		if (env[ENV_DEBUG]) log("message", msg);
 		this.handlers.message(socket, msg);
 	}
 }

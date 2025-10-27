@@ -1,7 +1,8 @@
 import { dlopen, FFIType, type Pointer, suffix } from "bun:ffi";
-import { PROCESS_COLOR } from "../../constants";
 import type { ProcessInfo } from "../../types";
 import { createLogger } from "../../utils";
+
+import { PROCESS_COLOR } from "../../constants";
 
 const log = createLogger("process:win32", ...PROCESS_COLOR);
 

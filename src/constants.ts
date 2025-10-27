@@ -61,8 +61,9 @@ export const WEBSOCKET_COLOR: [number, number, number] = [235, 69, 158];
 export const PROCESS_COLOR: [number, number, number] = [237, 66, 69];
 
 // file paths
-export const getDetectableDbPath = (): string =>
-	join(import.meta.dirname, "..", "detectable.json");
+export function getDetectableDbPath(): string {
+	return join(import.meta.dirname, "..", "detectable.json");
+}
 
 // enums
 export enum IPCMessageType {

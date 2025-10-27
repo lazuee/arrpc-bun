@@ -1,11 +1,4 @@
 import { file } from "bun";
-import {
-	EXECUTABLE_ARCH_SUFFIXES,
-	EXECUTABLE_EXACT_MATCH_PREFIX,
-	PROCESS_COLOR,
-	PROCESS_SCAN_INTERVAL,
-	getDetectableDbPath,
-} from "../constants";
 import type {
 	DetectableApp,
 	ExtendedSocket,
@@ -13,8 +6,15 @@ import type {
 	Handlers,
 } from "../types";
 import { createLogger } from "../utils";
-
 import * as Natives from "./native/index";
+
+import {
+	EXECUTABLE_ARCH_SUFFIXES,
+	EXECUTABLE_EXACT_MATCH_PREFIX,
+	PROCESS_COLOR,
+	PROCESS_SCAN_INTERVAL,
+	getDetectableDbPath,
+} from "../constants";
 
 const log = createLogger("process", ...PROCESS_COLOR);
 

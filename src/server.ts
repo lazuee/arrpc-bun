@@ -1,4 +1,10 @@
 import { EventEmitter } from "node:events";
+import { env } from "bun";
+import ProcessServer from "./process/index";
+import IPCServer from "./transports/ipc";
+import WSServer from "./transports/websocket";
+import { createLogger } from "./utils";
+
 import {
 	ACTIVITY_FLAG_INSTANCE,
 	ActivityType,
@@ -17,9 +23,7 @@ import {
 	SERVER_COLOR,
 	TIMESTAMP_PRECISION_THRESHOLD,
 } from "./constants";
-import ProcessServer from "./process/index";
-import IPCServer from "./transports/ipc";
-import WSServer from "./transports/websocket";
+
 import type {
 	ActivityPayload,
 	ExtendedSocket,
@@ -29,7 +33,6 @@ import type {
 	RPCMessage,
 	SetActivityArgs,
 } from "./types";
-import { createLogger } from "./utils";
 
 const log = createLogger("server", ...SERVER_COLOR);
 
@@ -49,43 +52,46 @@ export default class RPCServer extends EventEmitter {
 	private ws?: WSServer;
 	private process?: ProcessServer;
 
-	async shutdown(): Promise<void> {
-		log("shutting down...");
-		this.removeAllListeners();
+	private constructor() {
+		super();
 	}
 
-	constructor() {
-		super();
-		return (async () => {
-			this.onConnection = this.onConnection.bind(this);
-			this.onMessage = this.onMessage.bind(this);
-			this.onClose = this.onClose.bind(this);
+	static async create(): Promise<RPCServer> {
+		const server = new RPCServer();
 
-			const handlers: Handlers = {
-				connection: this.onConnection,
-				message: this.onMessage,
-				close: this.onClose,
-			};
+		server.onConnection = server.onConnection.bind(server);
+		server.onMessage = server.onMessage.bind(server);
+		server.onClose = server.onClose.bind(server);
 
-			this.ws = await new WSServer(handlers);
-			this.ipc = await new IPCServer(handlers);
+		const handlers: Handlers = {
+			connection: server.onConnection,
+			message: server.onMessage,
+			close: server.onClose,
+		};
 
-			if (
-				!process.argv.includes(CLI_ARG_NO_PROCESS_SCANNING) &&
-				!process.env[ENV_NO_PROCESS_SCANNING]
-			) {
-				this.process = await new ProcessServer(handlers);
-			}
+		server.ws = new WSServer(handlers);
+		server.ipc = await IPCServer.create(handlers);
 
-			return this;
-		})() as unknown as RPCServer;
+		if (
+			!process.argv.includes(CLI_ARG_NO_PROCESS_SCANNING) &&
+			!env[ENV_NO_PROCESS_SCANNING]
+		) {
+			server.process = new ProcessServer(handlers);
+		}
+
+		return server;
+	}
+
+	shutdown(): void {
+		log("shutting down...");
+		this.removeAllListeners();
 	}
 
 	onConnection(socket: ExtendedSocket | ExtendedWebSocket): void {
 		const id = socketId++;
 		socket.socketId = id;
 
-		if (process.env[ENV_DEBUG]) {
+		if (env[ENV_DEBUG]) {
 			log(
 				"new connection",
 				`socket #${id}`,
@@ -125,7 +131,7 @@ export default class RPCServer extends EventEmitter {
 		socket: ExtendedSocket | ExtendedWebSocket,
 		{ cmd, args, nonce }: RPCMessage,
 	): Promise<void> {
-		if (process.env[ENV_DEBUG]) {
+		if (env[ENV_DEBUG]) {
 			log(
 				"message received",
 				`socket #${socket.socketId}`,
@@ -199,7 +205,7 @@ export default class RPCServer extends EventEmitter {
 					}
 				}
 
-				if (process.env[ENV_DEBUG]) {
+				if (env[ENV_DEBUG]) {
 					log("emitting activity event");
 				}
 				this.emit("activity", {

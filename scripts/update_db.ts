@@ -1,6 +1,7 @@
 import { file, write } from "bun";
-import { getDetectableDbPath } from "../src/constants";
 import type { DetectableApp } from "../src/types/index.d.ts";
+
+import { getDetectableDbPath } from "../src/constants";
 
 const path = getDetectableDbPath();
 

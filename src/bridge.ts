@@ -1,4 +1,7 @@
-import { type Server, type ServerWebSocket, serve } from "bun";
+import { env, type Server, type ServerWebSocket, serve } from "bun";
+import type { ActivityPayload } from "./types";
+import { createLogger } from "./utils";
+
 import {
 	BRIDGE_COLOR,
 	BRIDGE_PORT_RANGE,
@@ -6,9 +9,8 @@ import {
 	ENV_BRIDGE_HOST,
 	ENV_BRIDGE_PORT,
 	ENV_DEBUG,
+	ENV_NO_BRIDGE,
 } from "./constants";
-import type { ActivityPayload } from "./types";
-import { createLogger } from "./utils";
 
 const log = createLogger("bridge", ...BRIDGE_COLOR);
 
@@ -16,37 +18,42 @@ const lastMsg: Record<string, ActivityPayload> = {};
 const clients = new Set<ServerWebSocket<unknown>>();
 let bridgeServer: Server<unknown> | undefined;
 
-export const getPort = (): number | undefined => {
+export function getPort(): number | undefined {
 	return bridgeServer?.port;
-};
+}
 
-export const send = (msg: ActivityPayload): void => {
-	if (process.env[ENV_DEBUG]) {
+export function send(msg: ActivityPayload): void {
+	if (env[ENV_DEBUG]) {
 		log("sending to bridge, connected clients:", clients.size, "msg:", msg);
 	}
 	lastMsg[msg.socketId] = msg;
 	for (const client of clients) {
 		client.send(JSON.stringify(msg));
 	}
-};
+}
 
-export const init = (): void => {
+export async function init(): Promise<void> {
+	if (env[ENV_NO_BRIDGE]) {
+		log("bridge disabled via ENV_NO_BRIDGE");
+		return;
+	}
+
 	let startPort = BRIDGE_PORT_RANGE[0];
-	if (process.env[ENV_BRIDGE_PORT]) {
-		const envPort = Number.parseInt(process.env[ENV_BRIDGE_PORT], 10);
+	if (env[ENV_BRIDGE_PORT]) {
+		const envPort = Number.parseInt(env[ENV_BRIDGE_PORT], 10);
 		if (Number.isNaN(envPort)) {
 			throw new Error("invalid ARRPC_BRIDGE_PORT");
 		}
 		startPort = envPort;
 	}
 
-	const hostname = process.env[ENV_BRIDGE_HOST] || DEFAULT_LOCALHOST;
+	const hostname = env[ENV_BRIDGE_HOST] || DEFAULT_LOCALHOST;
 
 	let port = startPort;
 	let server: Server<unknown> | undefined;
 
 	while (port <= BRIDGE_PORT_RANGE[1]) {
-		if (process.env[ENV_DEBUG]) log("trying port", port);
+		if (env[ENV_DEBUG]) log("trying port", port);
 
 		try {
 			server = serve({
@@ -102,4 +109,4 @@ export const init = (): void => {
 			`Failed to start bridge server - all ports in range ${BRIDGE_PORT_RANGE[0]}-${BRIDGE_PORT_RANGE[1]} are in use`,
 		);
 	}
-};
+}

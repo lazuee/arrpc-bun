@@ -1,9 +1,9 @@
-#!/usr/bin/env bun
-
-import * as Bridge from "./bridge";
-import { DEFAULT_VERSION, ENV_DEBUG } from "./constants";
+import { env } from "bun";
+import { init as initBridge, send as sendToBridge } from "./bridge";
 import Server from "./server";
 import { log } from "./utils";
+
+import { DEFAULT_VERSION, ENV_DEBUG } from "./constants";
 
 let version = DEFAULT_VERSION;
 try {
@@ -16,20 +16,20 @@ try {
 log(`arRPC-Bun v${version}`);
 
 (async () => {
-	await Bridge.init();
+	await initBridge();
 
-	const server = await new Server();
+	const server = await Server.create();
 
 	server.on("activity", (data) => {
-		if (process.env[ENV_DEBUG]) {
+		if (env[ENV_DEBUG]) {
 			log("activity event received, forwarding to bridge:", data);
 		}
-		Bridge.send(data);
+		sendToBridge(data);
 	});
 
-	const shutdown = async () => {
+	const shutdown = () => {
 		log("received shutdown signal");
-		await server.shutdown();
+		server.shutdown();
 		process.exit(0);
 	};
 
