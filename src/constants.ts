@@ -67,6 +67,10 @@ export function getDetectableDbPath(): string {
 	return join(import.meta.dirname, "..", "detectable.json");
 }
 
+export function getCustomDbPath(): string {
+	return "./detectable_fixes.json";
+}
+
 // enums
 export enum IPCMessageType {
 	HANDSHAKE = 0,

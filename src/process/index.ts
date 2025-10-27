@@ -2,6 +2,7 @@ import { file } from "bun";
 import {
 	EXECUTABLE_ARCH_SUFFIXES,
 	EXECUTABLE_EXACT_MATCH_PREFIX,
+	getCustomDbPath,
 	getDetectableDbPath,
 	PROCESS_COLOR,
 	PROCESS_SCAN_INTERVAL,
@@ -15,6 +16,61 @@ const log = createLogger("process", ...PROCESS_COLOR);
 const DetectableDB = (await file(
 	getDetectableDbPath(),
 ).json()) as DetectableApp[];
+
+function mergeCustomEntries(
+	customEntries: Partial<DetectableApp>[],
+	source: string,
+): void {
+	for (const customEntry of customEntries) {
+		if (!customEntry.id) continue;
+
+		const existingEntry = DetectableDB.find(
+			(entry) => entry.id === customEntry.id,
+		);
+
+		if (existingEntry) {
+			if (customEntry.executables) {
+				existingEntry.executables = [
+					...(existingEntry.executables || []),
+					...customEntry.executables,
+				];
+			}
+			if (customEntry.name) existingEntry.name = customEntry.name;
+			if (customEntry.aliases)
+				existingEntry.aliases = customEntry.aliases;
+		} else {
+			DetectableDB.push({
+				id: customEntry.id,
+				name: customEntry.name || "Custom Game",
+				executables: customEntry.executables || [],
+				aliases: customEntry.aliases || [],
+				hook: customEntry.hook ?? false,
+				overlay: customEntry.overlay ?? false,
+				overlay_warn: customEntry.overlay_warn ?? false,
+				overlay_compatibility_hook:
+					customEntry.overlay_compatibility_hook ?? false,
+				overlay_methods: customEntry.overlay_methods ?? null,
+				icon_hash: customEntry.icon_hash || "",
+				themes: customEntry.themes || [],
+			});
+		}
+	}
+
+	log(`loaded ${source} with`, customEntries.length, "entries");
+}
+
+// Load detectable_fixes.json if it exists
+// This file contains patches and additions to Discord's detectable database
+try {
+	const customFile = file(getCustomDbPath());
+	if (await customFile.exists()) {
+		const customEntries =
+			(await customFile.json()) as Partial<DetectableApp>[];
+		mergeCustomEntries(customEntries, "detectable_fixes.json");
+	}
+} catch {
+	// ignore errors if detectable_fixes.json doesn't exist or is invalid
+}
 
 const NativeImpl = (Natives as Record<string, Native>)[process.platform] as
 	| Native

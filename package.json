@@ -11,7 +11,8 @@
 		"dev": "bun --watch src/index.ts",
 		"lint": "bunx biome check",
 		"lint:fix": "bunx biome check --fix",
-		"update-db": "bun run scripts/update_db.ts"
+		"update-db": "bun run scripts/update_db.ts",
+		"validate-fixes": "bun run scripts/validate_fixes.ts"
 	},
 	"bin": {
 		"arrpc-bun": "src/index.ts"
