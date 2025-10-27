@@ -14,6 +14,12 @@ import { createLogger } from "../utils";
 
 const log = createLogger("websocket", ...WEBSOCKET_COLOR);
 
+type WSData = {
+	clientId: string;
+	encoding: string;
+	origin: string;
+};
+
 export default class WSServer {
 	private handlers!: Handlers;
 	private server?: Server<unknown>;
@@ -85,28 +91,13 @@ export default class WSServer {
 						return undefined;
 					},
 					websocket: {
-						open: (
-							ws: ServerWebSocket<{
-								clientId: string;
-								encoding: string;
-								origin: string;
-							}>,
-						) => this.onConnection(ws),
+						open: (ws: ServerWebSocket<WSData>) =>
+							this.onConnection(ws),
 						message: (
-							ws: ServerWebSocket<{
-								clientId: string;
-								encoding: string;
-								origin: string;
-							}>,
+							ws: ServerWebSocket<WSData>,
 							message: string | Buffer,
 						) => this.onMessage(ws, message),
-						close: (
-							ws: ServerWebSocket<{
-								clientId: string;
-								encoding: string;
-								origin: string;
-							}>,
-						) => {
+						close: (ws: ServerWebSocket<WSData>) => {
 							const extSocket =
 								ws as unknown as ExtendedWebSocket;
 							log("socket closed");
@@ -138,13 +129,7 @@ export default class WSServer {
 		return this.server?.port;
 	}
 
-	onConnection(
-		ws: ServerWebSocket<{
-			clientId: string;
-			encoding: string;
-			origin: string;
-		}>,
-	): void {
+	onConnection(ws: ServerWebSocket<WSData>): void {
 		const extSocket = ws as unknown as ExtendedWebSocket;
 		const { clientId, encoding } = ws.data;
 
@@ -170,14 +155,7 @@ export default class WSServer {
 		this.handlers.connection(extSocket);
 	}
 
-	onMessage(
-		ws: ServerWebSocket<{
-			clientId: string;
-			encoding: string;
-			origin: string;
-		}>,
-		msg: Buffer | string,
-	): void {
+	onMessage(ws: ServerWebSocket<WSData>, msg: Buffer | string): void {
 		const extSocket = ws as unknown as ExtendedWebSocket;
 		const parsedMsg = JSON.parse(msg.toString()) as RPCMessage;
 		if (env[ENV_DEBUG]) log("message", parsedMsg);

@@ -16,7 +16,6 @@ import {
 	RPCCommand,
 	RPCEvent,
 	SERVER_COLOR,
-	TIMESTAMP_PRECISION_THRESHOLD,
 } from "./constants";
 import ProcessServer from "./process/index";
 import IPCServer from "./transports/ipc";
@@ -40,7 +39,7 @@ function sendMessage(
 	socket: ExtendedSocket | ExtendedWebSocket,
 	msg: RPCMessage,
 ): void {
-	if ("send" in socket && socket.send) {
+	if (socket.send) {
 		socket.send(msg);
 	}
 }
@@ -56,11 +55,13 @@ export default class RPCServer extends EventEmitter {
 		server.onConnection = server.onConnection.bind(server);
 		server.onMessage = server.onMessage.bind(server);
 		server.onClose = server.onClose.bind(server);
+		server.onActivity = server.onActivity.bind(server);
 
 		const handlers: Handlers = {
 			connection: server.onConnection,
 			message: server.onMessage,
 			close: server.onClose,
+			activity: server.onActivity,
 		};
 
 		new WSServer(handlers);
@@ -119,6 +120,50 @@ export default class RPCServer extends EventEmitter {
 		} as ActivityPayload);
 
 		this.emit("close", socket);
+	}
+
+	onActivity(
+		socketId: string,
+		activity: unknown,
+		pid: number,
+		name?: string,
+	): void {
+		if (env[ENV_DEBUG]) {
+			log("process activity event", { socketId, activity, pid, name });
+		}
+
+		// convert timestamps if needed (for process-detected games)
+		if (
+			activity &&
+			typeof activity === "object" &&
+			"timestamps" in activity
+		) {
+			const timestamps = (
+				activity as { timestamps?: Record<string, number> }
+			).timestamps;
+			if (timestamps) {
+				for (const x in timestamps) {
+					const key = x as keyof typeof timestamps;
+					const value = timestamps[key];
+					// convert seconds to milliseconds if needed
+					// values less than 10000000000 are likely in seconds (before year 2286)
+					if (value && value < 10000000000) {
+						timestamps[key] = value * 1000;
+					}
+				}
+			}
+		}
+
+		this.emit("activity", {
+			activity: activity
+				? {
+						...(activity as Record<string, unknown>),
+						type: ActivityType.PLAYING,
+					}
+				: null,
+			pid,
+			socketId,
+		} as ActivityPayload);
 	}
 
 	async onMessage(
@@ -187,14 +232,10 @@ export default class RPCServer extends EventEmitter {
 					for (const x in timestamps) {
 						const key = x as keyof typeof timestamps;
 						const value = timestamps[key];
-						if (
-							value &&
-							Date.now().toString().length -
-								value.toString().length >
-								TIMESTAMP_PRECISION_THRESHOLD
-						) {
-							const newValue = Math.floor(1000 * value);
-							timestamps[key] = newValue as typeof value;
+						// convert seconds to milliseconds if needed
+						// values less than 10000000000 are likely in seconds (before year 2286)
+						if (value && value < 10000000000) {
+							timestamps[key] = (value * 1000) as typeof value;
 						}
 					}
 				}

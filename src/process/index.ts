@@ -6,13 +6,7 @@ import {
 	PROCESS_COLOR,
 	PROCESS_SCAN_INTERVAL,
 } from "../constants";
-import type {
-	DetectableApp,
-	ExtendedSocket,
-	ExtendedWebSocket,
-	Handlers,
-	Native,
-} from "../types";
+import type { DetectableApp, Handlers, Native } from "../types";
 import { createLogger } from "../utils";
 import * as Natives from "./native/index";
 
@@ -26,12 +20,37 @@ const NativeImpl = (Natives as Record<string, Native>)[process.platform] as
 	| Native
 	| undefined;
 
-const timestamps: Record<string, number> = {};
-const names: Record<string, string> = {};
-const pids: Record<string, number> = {};
+function matchesExecutable(
+	executable: { name: string; is_launcher?: boolean; arguments?: string },
+	toCompare: string[],
+	args: string[] | null,
+	checkLauncher: boolean,
+): boolean {
+	if (executable.is_launcher !== checkLauncher) return false;
+
+	const firstChar = executable.name[0];
+	const firstCompare = toCompare[0];
+	if (!firstChar || !firstCompare) return false;
+
+	const nameMatches =
+		firstChar === EXECUTABLE_EXACT_MATCH_PREFIX
+			? executable.name.substring(1) === firstCompare
+			: toCompare.some((y) => executable.name === y);
+
+	if (!nameMatches) return false;
+
+	if (args && executable.arguments) {
+		return args.join(" ").indexOf(executable.arguments) > -1;
+	}
+
+	return true;
+}
 
 export default class ProcessServer {
 	private handlers!: Handlers;
+	private timestamps: Record<string, number> = {};
+	private names: Record<string, string> = {};
+	private pids: Record<string, number> = {};
 
 	constructor(handlers: Handlers) {
 		if (!NativeImpl) return;
@@ -67,95 +86,59 @@ export default class ProcessServer {
 			}
 
 			for (const { executables, id, name } of DetectableDB) {
-				let matched = executables?.some((x) => {
-					if (x.is_launcher) return false;
-					const firstChar = x.name[0];
-					const firstCompare = toCompare[0];
-					if (!firstChar || !firstCompare) return false;
-					if (
-						firstChar === EXECUTABLE_EXACT_MATCH_PREFIX
-							? x.name.substring(1) !== firstCompare
-							: !toCompare.some((y) => x.name === y)
-					) {
-						return false;
-					}
-					if (args && x.arguments)
-						return args.join(" ").indexOf(x.arguments) > -1;
-					return true;
-				});
+				// try matching non-launcher executables first
+				let matched =
+					executables?.some((x) =>
+						matchesExecutable(x, toCompare, args, false),
+					) ?? false;
 
+				// if not matched try matching launcher executables
 				if (!matched) {
-					matched = executables?.some((x) => {
-						if (!x.is_launcher) return false;
-						const firstChar = x.name[0];
-						const firstCompare = toCompare[0];
-						if (!firstChar || !firstCompare) return false;
-						if (
-							firstChar === EXECUTABLE_EXACT_MATCH_PREFIX
-								? x.name.substring(1) !== firstCompare
-								: !toCompare.some((y) => x.name === y)
-						) {
-							return false;
-						}
-						if (args && x.arguments)
-							return args.join(" ").indexOf(x.arguments) > -1;
-						return true;
-					});
+					matched =
+						executables?.some((x) =>
+							matchesExecutable(x, toCompare, args, true),
+						) ?? false;
 				}
 
 				if (matched) {
-					names[id] = name;
-					pids[id] = pid;
+					this.names[id] = name;
+					this.pids[id] = pid;
 
 					ids.push(id);
-					if (!timestamps[id]) {
+					if (!this.timestamps[id]) {
 						log("detected game!", name);
-						timestamps[id] = Date.now();
+						this.timestamps[id] = Date.now();
 					}
 
-					const timestamp = timestamps[id];
+					const timestamp = this.timestamps[id];
 					if (!timestamp) continue;
 
-					this.handlers.message(
+					this.handlers.activity(
+						id,
 						{
-							socketId: id,
-						} as unknown as ExtendedSocket | ExtendedWebSocket,
-						{
-							cmd: "SET_ACTIVITY",
-							args: {
-								activity: {
-									application_id: id,
-									name,
-									timestamps: {
-										start: timestamp,
-									},
-								},
-								pid,
+							application_id: id,
+							name,
+							timestamps: {
+								start: timestamp,
 							},
 						},
+						pid,
+						name,
 					);
 				}
 			}
 		}
 
-		for (const id in timestamps) {
+		for (const id in this.timestamps) {
 			if (!ids.includes(id)) {
-				const gameName = names[id];
+				const gameName = this.names[id];
 				log("lost game!", gameName ?? "unknown");
-				delete timestamps[id];
+				delete this.timestamps[id];
 
-				this.handlers.message(
-					{
-						socketId: id,
-					} as unknown as ExtendedSocket | ExtendedWebSocket,
-					{
-						cmd: "SET_ACTIVITY",
-						args: {
-							activity: null,
-							pid: pids[id],
-						},
-					},
-				);
+				const pid = this.pids[id];
+				if (pid !== undefined) {
+					this.handlers.activity(id, null, pid);
+				}
 			}
 		}
 	}

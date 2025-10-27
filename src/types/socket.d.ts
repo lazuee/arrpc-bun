@@ -28,4 +28,10 @@ export interface Handlers {
 		msg: RPCMessage,
 	) => void;
 	close: (socket: ExtendedSocket | ExtendedWebSocket) => void;
+	activity: (
+		socketId: string,
+		activity: unknown,
+		pid: number,
+		name?: string,
+	) => void;
 }

@@ -14,24 +14,22 @@ try {
 
 log(`arRPC-Bun v${version}`);
 
-(async () => {
-	await initBridge();
+await initBridge();
 
-	const server = await Server.create();
+const server = await Server.create();
 
-	server.on("activity", (data) => {
-		if (env[ENV_DEBUG]) {
-			log("activity event received, forwarding to bridge:", data);
-		}
-		sendToBridge(data);
-	});
+server.on("activity", (data) => {
+	if (env[ENV_DEBUG]) {
+		log("activity event received, forwarding to bridge:", data);
+	}
+	sendToBridge(data);
+});
 
-	const shutdown = () => {
-		log("received shutdown signal");
-		server.shutdown();
-		process.exit(0);
-	};
+const shutdown = () => {
+	log("received shutdown signal");
+	server.shutdown();
+	process.exit(0);
+};
 
-	process.on("SIGINT", shutdown);
-	process.on("SIGTERM", shutdown);
-})();
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
