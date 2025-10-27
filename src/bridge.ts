@@ -7,6 +7,11 @@ const log = createLogger("bridge", 87, 242, 135);
 
 const lastMsg: Record<string, ActivityPayload> = {};
 const clients = new Set<ServerWebSocket<unknown>>();
+let bridgeServer: Server<unknown> | undefined;
+
+export const getPort = (): number | undefined => {
+	return bridgeServer?.port;
+};
 
 export const send = (msg: ActivityPayload): void => {
 	if (process.env.ARRPC_DEBUG) {
@@ -71,6 +76,7 @@ export const init = (): void => {
 				},
 			});
 
+			bridgeServer = server;
 			log("listening on", port);
 			break;
 		} catch (e) {
