@@ -25,12 +25,16 @@ function matchesExecutable(
 		name: string;
 		is_launcher?: boolean;
 		arguments?: string;
+		os?: string;
 	},
 	toCompare: string[],
 	args: string[] | null,
 	checkLauncher: boolean,
+	strictArgs = true,
 ): boolean {
 	if (executable.is_launcher !== checkLauncher) return false;
+
+	// if (executable.os && executable.os !== process.platform) return false;
 
 	const firstChar = executable.name[0];
 	const firstCompare = toCompare[0];
@@ -44,7 +48,11 @@ function matchesExecutable(
 	if (!nameMatches) return false;
 
 	if (args && executable.arguments) {
-		return args.join(" ").indexOf(executable.arguments) > -1;
+		const argsMatch = args.join(" ").indexOf(executable.arguments) > -1;
+		if (strictArgs) {
+			return argsMatch; // must match exactly
+		}
+		// arguments are advisory, name match is enough
 	}
 
 	return true;
@@ -90,17 +98,36 @@ export default class ProcessServer {
 			}
 
 			for (const { executables, id, name } of DetectableDB) {
-				// try matching non-launcher executables first
+				// prioritize exact matches (with strict argument checking)
+				// try non-launcher executables with strict args first
 				let matched =
 					executables?.some((x) =>
-						matchesExecutable(x, toCompare, args, false),
+						matchesExecutable(x, toCompare, args, false, true),
 					) ?? false;
 
-				// if not matched try matching launcher executables
+				// try launcher executables with strict args
 				if (!matched) {
 					matched =
 						executables?.some((x) =>
-							matchesExecutable(x, toCompare, args, true),
+							matchesExecutable(x, toCompare, args, true, true),
+						) ?? false;
+				}
+
+				// fall back to lenient matching (name-only, ignore argument mismatches)
+				// this handles cases where Discord's database has outdated argument requirements
+				if (!matched) {
+					// try non-launcher executables without strict args
+					matched =
+						executables?.some((x) =>
+							matchesExecutable(x, toCompare, args, false, false),
+						) ?? false;
+				}
+
+				// try launcher executables without strict args
+				if (!matched) {
+					matched =
+						executables?.some((x) =>
+							matchesExecutable(x, toCompare, args, true, false),
 						) ?? false;
 				}
 
