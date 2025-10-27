@@ -1,8 +1,8 @@
 import { file, write } from "bun";
-import { DETECTABLE_DB_PATH } from "../src/constants";
+import { getDetectableDbPath } from "../src/constants";
 import type { DetectableApp } from "../src/types/index.d.ts";
 
-const path = DETECTABLE_DB_PATH;
+const path = getDetectableDbPath();
 
 const currentFile = file(path);
 const current: DetectableApp[] = (await currentFile.exists())

@@ -1,10 +1,10 @@
 import { file } from "bun";
 import {
-	DETECTABLE_DB_PATH,
 	EXECUTABLE_ARCH_SUFFIXES,
 	EXECUTABLE_EXACT_MATCH_PREFIX,
 	PROCESS_COLOR,
 	PROCESS_SCAN_INTERVAL,
+	getDetectableDbPath,
 } from "../constants";
 import type {
 	DetectableApp,
@@ -18,7 +18,9 @@ import * as Natives from "./native/index";
 
 const log = createLogger("process", ...PROCESS_COLOR);
 
-const DetectableDB = (await file(DETECTABLE_DB_PATH).json()) as DetectableApp[];
+const DetectableDB = (await file(
+	getDetectableDbPath(),
+).json()) as DetectableApp[];
 
 type Native = {
 	getProcesses: () => Promise<Array<[number, string, string[]]>>;
