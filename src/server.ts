@@ -1,5 +1,22 @@
 import { EventEmitter } from "node:events";
-import { MOCK_USER } from "./constants";
+import {
+	ACTIVITY_FLAG_INSTANCE,
+	ActivityType,
+	CLI_ARG_NO_PROCESS_SCANNING,
+	DEFAULT_SOCKET_ID,
+	DISCORD_API_ENDPOINT,
+	DISCORD_CDN_HOST,
+	DISCORD_ENVIRONMENT,
+	ENV_DEBUG,
+	ENV_NO_PROCESS_SCANNING,
+	IPCErrorCode,
+	MOCK_USER,
+	RPC_PROTOCOL_VERSION,
+	RPCCommand,
+	RPCEvent,
+	SERVER_COLOR,
+	TIMESTAMP_PRECISION_THRESHOLD,
+} from "./constants";
 import ProcessServer from "./process/index";
 import IPCServer from "./transports/ipc";
 import WSServer from "./transports/websocket";
@@ -14,7 +31,7 @@ import type {
 } from "./types";
 import { createLogger } from "./utils";
 
-const log = createLogger("server", 87, 242, 135);
+const log = createLogger("server", ...SERVER_COLOR);
 
 let socketId = 0;
 
@@ -54,8 +71,8 @@ export default class RPCServer extends EventEmitter {
 			this.ipc = await new IPCServer(handlers);
 
 			if (
-				!process.argv.includes("--no-process-scanning") &&
-				!process.env.ARRPC_NO_PROCESS_SCANNING
+				!process.argv.includes(CLI_ARG_NO_PROCESS_SCANNING) &&
+				!process.env[ENV_NO_PROCESS_SCANNING]
 			) {
 				this.process = await new ProcessServer(handlers);
 			}
@@ -68,7 +85,7 @@ export default class RPCServer extends EventEmitter {
 		const id = socketId++;
 		socket.socketId = id;
 
-		if (process.env.ARRPC_DEBUG) {
+		if (process.env[ENV_DEBUG]) {
 			log(
 				"new connection",
 				`socket #${id}`,
@@ -77,17 +94,17 @@ export default class RPCServer extends EventEmitter {
 		}
 
 		sendMessage(socket, {
-			cmd: "DISPATCH",
+			cmd: RPCCommand.DISPATCH,
 			data: {
-				v: 1,
+				v: RPC_PROTOCOL_VERSION,
 				config: {
-					cdn_host: "cdn.discordapp.com",
-					api_endpoint: "//discord.com/api",
-					environment: "production",
+					cdn_host: DISCORD_CDN_HOST,
+					api_endpoint: DISCORD_API_ENDPOINT,
+					environment: DISCORD_ENVIRONMENT,
 				},
 				user: MOCK_USER,
 			},
-			evt: "READY",
+			evt: RPCEvent.READY,
 			nonce: null,
 		});
 
@@ -98,7 +115,7 @@ export default class RPCServer extends EventEmitter {
 		this.emit("activity", {
 			activity: null,
 			pid: socket.lastPid,
-			socketId: socket.socketId?.toString() ?? "0",
+			socketId: socket.socketId?.toString() ?? DEFAULT_SOCKET_ID,
 		} as ActivityPayload);
 
 		this.emit("close", socket);
@@ -108,7 +125,7 @@ export default class RPCServer extends EventEmitter {
 		socket: ExtendedSocket | ExtendedWebSocket,
 		{ cmd, args, nonce }: RPCMessage,
 	): Promise<void> {
-		if (process.env.ARRPC_DEBUG) {
+		if (process.env[ENV_DEBUG]) {
 			log(
 				"message received",
 				`socket #${socket.socketId}`,
@@ -120,18 +137,18 @@ export default class RPCServer extends EventEmitter {
 		this.emit("message", { socket, cmd, args, nonce });
 
 		switch (cmd) {
-			case "CONNECTIONS_CALLBACK":
+			case RPCCommand.CONNECTIONS_CALLBACK:
 				sendMessage(socket, {
 					cmd,
 					data: {
 						code: 1000,
 					},
-					evt: "ERROR",
+					evt: RPCEvent.ERROR,
 					nonce,
 				});
 				break;
 
-			case "SET_ACTIVITY": {
+			case RPCCommand.SET_ACTIVITY: {
 				const setActivityArgs = args as SetActivityArgs;
 				const { activity, pid } = setActivityArgs;
 
@@ -146,7 +163,8 @@ export default class RPCServer extends EventEmitter {
 					this.emit("activity", {
 						activity: null,
 						pid,
-						socketId: socket.socketId?.toString() ?? "0",
+						socketId:
+							socket.socketId?.toString() ?? DEFAULT_SOCKET_ID,
 					} as ActivityPayload);
 					return;
 				}
@@ -173,7 +191,7 @@ export default class RPCServer extends EventEmitter {
 							value &&
 							Date.now().toString().length -
 								value.toString().length >
-								2
+								TIMESTAMP_PRECISION_THRESHOLD
 						) {
 							const newValue = Math.floor(1000 * value);
 							timestamps[key] = newValue as typeof value;
@@ -181,20 +199,20 @@ export default class RPCServer extends EventEmitter {
 					}
 				}
 
-				if (process.env.ARRPC_DEBUG) {
+				if (process.env[ENV_DEBUG]) {
 					log("emitting activity event");
 				}
 				this.emit("activity", {
 					activity: {
 						application_id: socket.clientId,
-						type: 0,
+						type: ActivityType.PLAYING,
 						metadata,
-						flags: instance ? 1 << 0 : 0,
+						flags: instance ? ACTIVITY_FLAG_INSTANCE : 0,
 						...activity,
 						...extra,
 					},
 					pid,
-					socketId: socket.socketId?.toString() ?? "0",
+					socketId: socket.socketId?.toString() ?? DEFAULT_SOCKET_ID,
 				} as ActivityPayload);
 
 				sendMessage(socket, {
@@ -203,7 +221,7 @@ export default class RPCServer extends EventEmitter {
 						...activity,
 						name: "",
 						application_id: socket.clientId,
-						type: 0,
+						type: ActivityType.PLAYING,
 					},
 					evt: null,
 					nonce,
@@ -212,22 +230,24 @@ export default class RPCServer extends EventEmitter {
 				break;
 			}
 
-			case "GUILD_TEMPLATE_BROWSER":
-			case "INVITE_BROWSER": {
+			case RPCCommand.GUILD_TEMPLATE_BROWSER:
+			case RPCCommand.INVITE_BROWSER: {
 				const inviteArgs = args as InviteArgs;
 				const { code } = inviteArgs;
 
-				const isInvite = cmd === "INVITE_BROWSER";
+				const isInvite = cmd === RPCCommand.INVITE_BROWSER;
 				const callback = (isValid = true) => {
 					sendMessage(socket, {
 						cmd,
 						data: isValid
 							? { code }
 							: {
-									code: isInvite ? 4011 : 4017,
+									code: isInvite
+										? IPCErrorCode.INVALID_INVITE
+										: IPCErrorCode.INVALID_GUILD_TEMPLATE,
 									message: `Invalid ${isInvite ? "invite" : "guild template"} id: ${code}`,
 								},
-						evt: isValid ? null : "ERROR",
+						evt: isValid ? null : RPCEvent.ERROR,
 						nonce,
 					});
 				};
@@ -240,12 +260,12 @@ export default class RPCServer extends EventEmitter {
 				break;
 			}
 
-			case "DEEP_LINK": {
+			case RPCCommand.DEEP_LINK: {
 				const deep_callback = (success: boolean) => {
 					sendMessage(socket, {
 						cmd,
 						data: null,
-						evt: success ? null : "ERROR",
+						evt: success ? null : RPCEvent.ERROR,
 						nonce,
 					});
 				};

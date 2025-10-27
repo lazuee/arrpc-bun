@@ -1,9 +1,10 @@
 import { file, Glob } from "bun";
+import { CMDLINE_NULL_SEPARATOR, LINUX_PROC_DIR } from "../../constants";
 import type { ProcessInfo } from "../../types";
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
 	const procDir = await Array.fromAsync(
-		new Glob("*").scan({ cwd: "/proc", onlyFiles: false }),
+		new Glob("*").scan({ cwd: LINUX_PROC_DIR, onlyFiles: false }),
 	);
 
 	const processes = await Promise.all(
@@ -12,8 +13,10 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 			if (pidNum <= 0) return null;
 
 			try {
-				const cmdline = await file(`/proc/${pid}/cmdline`).text();
-				const parts = cmdline.split("\0");
+				const cmdline = await file(
+					`${LINUX_PROC_DIR}/${pid}/cmdline`,
+				).text();
+				const parts = cmdline.split(CMDLINE_NULL_SEPARATOR);
 				const path = parts[0];
 				if (!path) return null;
 				return [pidNum, path, parts.slice(1)] as ProcessInfo;

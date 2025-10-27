@@ -1,9 +1,18 @@
 import { type Server, type ServerWebSocket, serve } from "bun";
-import { WEBSOCKET_PORT_RANGE } from "../constants";
+import {
+	ALLOWED_DISCORD_ORIGINS,
+	DEFAULT_LOCALHOST,
+	ENV_DEBUG,
+	ENV_WEBSOCKET_HOST,
+	RPC_PROTOCOL_VERSION,
+	WEBSOCKET_COLOR,
+	WEBSOCKET_PORT_RANGE,
+	WS_DEFAULT_ENCODING,
+} from "../constants";
 import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
 import { createLogger } from "../utils";
 
-const log = createLogger("websocket", 235, 69, 158);
+const log = createLogger("websocket", ...WEBSOCKET_COLOR);
 
 export default class WSServer {
 	private handlers!: Handlers;
@@ -16,13 +25,14 @@ export default class WSServer {
 			this.onConnection = this.onConnection.bind(this);
 			this.onMessage = this.onMessage.bind(this);
 
-			const hostname = process.env.ARRPC_WEBSOCKET_HOST || "127.0.0.1";
+			const hostname =
+				process.env[ENV_WEBSOCKET_HOST] || DEFAULT_LOCALHOST;
 
 			let port = WEBSOCKET_PORT_RANGE[0];
 			let server: Server<unknown> | undefined;
 
 			while (port <= WEBSOCKET_PORT_RANGE[1]) {
-				if (process.env.ARRPC_DEBUG) log("trying port", port);
+				if (process.env[ENV_DEBUG]) log("trying port", port);
 
 				try {
 					server = serve({
@@ -32,20 +42,17 @@ export default class WSServer {
 							const url = new URL(req.url);
 							const params = url.searchParams;
 							const ver = Number.parseInt(
-								params.get("v") ?? "1",
+								params.get("v") ?? String(RPC_PROTOCOL_VERSION),
 								10,
 							);
-							const encoding = params.get("encoding") ?? "json";
+							const encoding =
+								params.get("encoding") ?? WS_DEFAULT_ENCODING;
 							const clientId = params.get("client_id") ?? "";
 							const origin = req.headers.get("origin") ?? "";
 
 							if (
 								origin !== "" &&
-								![
-									"https://discord.com",
-									"https://ptb.discord.com",
-									"https://canary.discord.com",
-								].includes(origin)
+								!ALLOWED_DISCORD_ORIGINS.includes(origin)
 							) {
 								log("disallowed origin", origin);
 								return new Response("Disallowed origin", {
@@ -53,14 +60,14 @@ export default class WSServer {
 								});
 							}
 
-							if (encoding !== "json") {
+							if (encoding !== WS_DEFAULT_ENCODING) {
 								log("unsupported encoding requested", encoding);
 								return new Response("Unsupported encoding", {
 									status: 400,
 								});
 							}
 
-							if (ver !== 1) {
+							if (ver !== RPC_PROTOCOL_VERSION) {
 								log("unsupported version requested", ver);
 								return new Response("Unsupported version", {
 									status: 400,
@@ -145,7 +152,7 @@ export default class WSServer {
 		const extSocket = ws as unknown as ExtendedWebSocket;
 		const { clientId, encoding } = ws.data;
 
-		if (process.env.ARRPC_DEBUG) {
+		if (process.env[ENV_DEBUG]) {
 			log("new connection! clientId:", clientId, "encoding:", encoding);
 		}
 
@@ -159,7 +166,7 @@ export default class WSServer {
 		};
 
 		extSocket.send = (msg: RPCMessage | string) => {
-			if (process.env.ARRPC_DEBUG) log("sending", msg);
+			if (process.env[ENV_DEBUG]) log("sending", msg);
 			const data = typeof msg === "string" ? msg : JSON.stringify(msg);
 			extSocket._send?.(data);
 		};
@@ -177,7 +184,7 @@ export default class WSServer {
 	): void {
 		const extSocket = ws as unknown as ExtendedWebSocket;
 		const parsedMsg = JSON.parse(msg.toString()) as RPCMessage;
-		if (process.env.ARRPC_DEBUG) log("message", parsedMsg);
+		if (process.env[ENV_DEBUG]) log("message", parsedMsg);
 		this.handlers.message(extSocket, parsedMsg);
 	}
 }

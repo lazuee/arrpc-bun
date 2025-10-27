@@ -1,16 +1,73 @@
 import { join } from "node:path";
 
+// environment Variables
+export const ENV_DEBUG = "ARRPC_DEBUG";
+export const ENV_NO_PROCESS_SCANNING = "ARRPC_NO_PROCESS_SCANNING";
+export const ENV_BRIDGE_PORT = "ARRPC_BRIDGE_PORT";
+export const ENV_BRIDGE_HOST = "ARRPC_BRIDGE_HOST";
+export const ENV_WEBSOCKET_HOST = "ARRPC_WEBSOCKET_HOST";
+export const ENV_NO_BRIDGE = "ARRPC_NO_BRIDGE";
+
+// CLI Arguments
+export const CLI_ARG_NO_PROCESS_SCANNING = "--no-process-scanning";
+
+// network
 export const BRIDGE_PORT_RANGE: [number, number] = [1337, 1347];
 export const WEBSOCKET_PORT_RANGE: [number, number] = [6463, 6472];
-export const PROCESS_SCAN_INTERVAL = 5000;
+export const DEFAULT_LOCALHOST = "127.0.0.1";
+
+// IPC
 export const IPC_MAX_RETRIES = 9;
 export const SOCKET_AVAILABILITY_TIMEOUT = 1000;
+export const IPC_HEADER_SIZE = 8;
+export const IPC_MESSAGE_TYPE_MAX = 5;
+export const IPC_SOCKET_NAME = "discord-ipc";
+export const WINDOWS_IPC_PIPE_PATH = "\\\\?\\pipe\\discord-ipc";
+export const UNIX_TEMP_DIR_FALLBACK = "/tmp";
+
+// webSocket
+export const WS_DEFAULT_ENCODING = "json";
+
+// RPC Protocol
+export const RPC_PROTOCOL_VERSION = 1;
+export const DEFAULT_VERSION = "unknown";
+export const DEFAULT_SOCKET_ID = "0";
+export const TIMESTAMP_PRECISION_THRESHOLD = 2;
+export const ACTIVITY_FLAG_INSTANCE = 1 << 0;
+
+// discord API
+export const DISCORD_CDN_HOST = "cdn.discordapp.com";
+export const DISCORD_API_ENDPOINT = "//discord.com/api";
+export const DISCORD_ENVIRONMENT = "production";
+export const ALLOWED_DISCORD_ORIGINS: readonly string[] = [
+	"https://discord.com",
+	"https://ptb.discord.com",
+	"https://canary.discord.com",
+];
+
+// process Scanning
+export const PROCESS_SCAN_INTERVAL = 5000;
+export const EXECUTABLE_ARCH_SUFFIXES = ["64", ".x64", "x64", "_64"] as const;
+export const EXECUTABLE_EXACT_MATCH_PREFIX = ">";
+export const LINUX_PROC_DIR = "/proc";
+export const CMDLINE_NULL_SEPARATOR = "\0";
+
+// Logger Colors (RGB)
+export const ARRPC_BRAND_COLOR: [number, number, number] = [88, 101, 242];
+export const SERVER_COLOR: [number, number, number] = [87, 242, 135];
+export const BRIDGE_COLOR: [number, number, number] = [87, 242, 135];
+export const IPC_COLOR: [number, number, number] = [254, 231, 92];
+export const WEBSOCKET_COLOR: [number, number, number] = [235, 69, 158];
+export const PROCESS_COLOR: [number, number, number] = [237, 66, 69];
+
+// file paths
 export const DETECTABLE_DB_PATH = join(
 	import.meta.dirname,
 	"..",
 	"detectable.json",
 );
 
+// enums
 export enum IPCMessageType {
 	HANDSHAKE = 0,
 	FRAME = 1,
@@ -32,8 +89,29 @@ export enum IPCErrorCode {
 	TOKEN_REVOKED = 4003,
 	INVALID_VERSION = 4004,
 	INVALID_ENCODING = 4005,
+	INVALID_INVITE = 4011,
+	INVALID_GUILD_TEMPLATE = 4017,
 }
 
+export enum RPCCommand {
+	DISPATCH = "DISPATCH",
+	SET_ACTIVITY = "SET_ACTIVITY",
+	INVITE_BROWSER = "INVITE_BROWSER",
+	GUILD_TEMPLATE_BROWSER = "GUILD_TEMPLATE_BROWSER",
+	DEEP_LINK = "DEEP_LINK",
+	CONNECTIONS_CALLBACK = "CONNECTIONS_CALLBACK",
+}
+
+export enum RPCEvent {
+	READY = "READY",
+	ERROR = "ERROR",
+}
+
+export enum ActivityType {
+	PLAYING = 0,
+}
+
+// mock User
 export const MOCK_USER = {
 	id: "1045800378228281345",
 	username: "arrpc",

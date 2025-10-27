@@ -8,27 +8,35 @@ import {
 import { join } from "node:path";
 import { env } from "bun";
 import {
+	ENV_DEBUG,
+	IPC_COLOR,
+	IPC_HEADER_SIZE,
 	IPC_MAX_RETRIES,
+	IPC_MESSAGE_TYPE_MAX,
+	IPC_SOCKET_NAME,
 	IPCCloseCode,
 	IPCErrorCode,
 	IPCMessageType,
+	RPC_PROTOCOL_VERSION,
 	SOCKET_AVAILABILITY_TIMEOUT,
+	UNIX_TEMP_DIR_FALLBACK,
+	WINDOWS_IPC_PIPE_PATH,
 } from "../constants";
 import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
 import { createLogger } from "../utils";
 
-const log = createLogger("ipc", 254, 231, 92);
+const log = createLogger("ipc", ...IPC_COLOR);
 
 const SOCKET_PATH =
 	process.platform === "win32"
-		? "\\\\?\\pipe\\discord-ipc"
+		? WINDOWS_IPC_PIPE_PATH
 		: join(
 				env.XDG_RUNTIME_DIR ||
 					env.TMPDIR ||
 					env.TMP ||
 					env.TEMP ||
-					"/tmp",
-				"discord-ipc",
+					UNIX_TEMP_DIR_FALLBACK,
+				IPC_SOCKET_NAME,
 			);
 
 let uniqueId = 0;
@@ -37,24 +45,25 @@ const encode = (type: number, data: unknown): Buffer => {
 	const dataStr = JSON.stringify(data);
 	const dataSize = Buffer.byteLength(dataStr);
 
-	const buf = Buffer.alloc(dataSize + 8);
+	const buf = Buffer.alloc(dataSize + IPC_HEADER_SIZE);
 	buf.writeInt32LE(type, 0);
 	buf.writeInt32LE(dataSize, 4);
-	buf.write(dataStr, 8, dataSize);
+	buf.write(dataStr, IPC_HEADER_SIZE, dataSize);
 
 	return buf;
 };
 
 const read = (socket: ExtendedSocket): void => {
 	while (true) {
-		let resp = socket.read(8);
+		let resp = socket.read(IPC_HEADER_SIZE);
 		if (!resp) return;
 
 		resp = Buffer.from(resp);
 		const type = resp.readInt32LE(0);
 		const dataSize = resp.readInt32LE(4);
 
-		if (type < 0 || type >= 5) throw new Error("invalid type");
+		if (type < 0 || type > IPC_MESSAGE_TYPE_MAX)
+			throw new Error("invalid type");
 
 		const data = socket.read(dataSize);
 		if (!data) throw new Error("failed reading data");
@@ -114,7 +123,7 @@ const socketIsAvailable = async (socket: Socket): Promise<boolean> => {
 			socket.end();
 			socket.destroy();
 		} catch (e: unknown) {
-			if (process.env.ARRPC_DEBUG) log("error stopping socket", e);
+			if (process.env[ENV_DEBUG]) log("error stopping socket", e);
 		}
 	};
 
@@ -135,7 +144,7 @@ const socketIsAvailable = async (socket: Socket): Promise<boolean> => {
 
 	const outcome = await possibleOutcomes;
 	stop();
-	if (process.env.ARRPC_DEBUG) {
+	if (process.env[ENV_DEBUG]) {
 		log(
 			"checked if socket is available:",
 			outcome === true,
@@ -154,14 +163,14 @@ const getAvailableSocket = async (tries = 0): Promise<string> => {
 	const path = `${SOCKET_PATH}-${tries}`;
 	const socket = createConnection(path);
 
-	if (process.env.ARRPC_DEBUG) log("checking", path);
+	if (process.env[ENV_DEBUG]) log("checking", path);
 
 	if (await socketIsAvailable(socket)) {
 		if (process.platform !== "win32") {
 			try {
 				unlinkSync(path);
 			} catch (e: unknown) {
-				if (process.env.ARRPC_DEBUG) log("error unlinking socket", e);
+				if (process.env[ENV_DEBUG]) log("error unlinking socket", e);
 			}
 		}
 		return path;
@@ -224,9 +233,12 @@ export default class IPCServer {
 		socket.once(
 			"handshake",
 			(params: { v?: string; client_id?: string }) => {
-				if (process.env.ARRPC_DEBUG) log("handshake:", params);
+				if (process.env[ENV_DEBUG]) log("handshake:", params);
 
-				const ver = Number.parseInt(params.v ?? "1", 10);
+				const ver = Number.parseInt(
+					params.v ?? String(RPC_PROTOCOL_VERSION),
+					10,
+				);
 				const clientId = params.client_id ?? "";
 
 				extSocket.close = (
@@ -242,7 +254,7 @@ export default class IPCServer {
 					socket.destroy();
 				};
 
-				if (ver !== 1) {
+				if (ver !== RPC_PROTOCOL_VERSION) {
 					log("unsupported version requested", ver);
 					extSocket.close?.(IPCErrorCode.INVALID_VERSION);
 					return;
@@ -267,7 +279,7 @@ export default class IPCServer {
 
 				extSocket._send = extSocket.send;
 				extSocket.send = (msg: RPCMessage) => {
-					if (process.env.ARRPC_DEBUG) log("sending", msg);
+					if (process.env[ENV_DEBUG]) log("sending", msg);
 					socket.write(encode(IPCMessageType.FRAME, msg));
 				};
 
@@ -279,7 +291,7 @@ export default class IPCServer {
 	}
 
 	onMessage(socket: ExtendedSocket, msg: RPCMessage): void {
-		if (process.env.ARRPC_DEBUG) log("message", msg);
+		if (process.env[ENV_DEBUG]) log("message", msg);
 		this.handlers.message(socket, msg);
 	}
 }

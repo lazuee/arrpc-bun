@@ -18,12 +18,9 @@
 	"files": [
 		"src/",
 		"scripts/",
-		"examples/",
-		"ext/",
 		"detectable.json",
 		"LICENSE",
-		"README.md",
-		"changelog.md"
+		"README.md"
 	],
 	"engines": {
 		"bun": ">=1.0.0"

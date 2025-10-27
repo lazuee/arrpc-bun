@@ -1,4 +1,5 @@
 import { color } from "bun";
+import { ARRPC_BRAND_COLOR } from "./constants";
 
 export const rgb = (r: number, g: number, b: number, msg: string): string => {
 	const ansiCode = color([r, g, b], "ansi-16m");
@@ -13,12 +14,12 @@ export const createLogger = (
 ) => {
 	return (...args: unknown[]): void => {
 		console.log(
-			`[${rgb(88, 101, 242, "arRPC")} > ${rgb(r, g, b, component)}]`,
+			`[${rgb(...ARRPC_BRAND_COLOR, "arRPC")} > ${rgb(r, g, b, component)}]`,
 			...args,
 		);
 	};
 };
 
 export const log = (...args: unknown[]): void => {
-	console.log(`[${rgb(88, 101, 242, "arRPC")}]`, ...args);
+	console.log(`[${rgb(...ARRPC_BRAND_COLOR, "arRPC")}]`, ...args);
 };

@@ -1,9 +1,16 @@
 import { type Server, type ServerWebSocket, serve } from "bun";
-import { BRIDGE_PORT_RANGE } from "./constants";
+import {
+	BRIDGE_COLOR,
+	BRIDGE_PORT_RANGE,
+	DEFAULT_LOCALHOST,
+	ENV_BRIDGE_HOST,
+	ENV_BRIDGE_PORT,
+	ENV_DEBUG,
+} from "./constants";
 import type { ActivityPayload } from "./types";
 import { createLogger } from "./utils";
 
-const log = createLogger("bridge", 87, 242, 135);
+const log = createLogger("bridge", ...BRIDGE_COLOR);
 
 const lastMsg: Record<string, ActivityPayload> = {};
 const clients = new Set<ServerWebSocket<unknown>>();
@@ -14,7 +21,7 @@ export const getPort = (): number | undefined => {
 };
 
 export const send = (msg: ActivityPayload): void => {
-	if (process.env.ARRPC_DEBUG) {
+	if (process.env[ENV_DEBUG]) {
 		log("sending to bridge, connected clients:", clients.size, "msg:", msg);
 	}
 	lastMsg[msg.socketId] = msg;
@@ -25,21 +32,21 @@ export const send = (msg: ActivityPayload): void => {
 
 export const init = (): void => {
 	let startPort = BRIDGE_PORT_RANGE[0];
-	if (process.env.ARRPC_BRIDGE_PORT) {
-		const envPort = Number.parseInt(process.env.ARRPC_BRIDGE_PORT, 10);
+	if (process.env[ENV_BRIDGE_PORT]) {
+		const envPort = Number.parseInt(process.env[ENV_BRIDGE_PORT], 10);
 		if (Number.isNaN(envPort)) {
 			throw new Error("invalid ARRPC_BRIDGE_PORT");
 		}
 		startPort = envPort;
 	}
 
-	const hostname = process.env.ARRPC_BRIDGE_HOST || "127.0.0.1";
+	const hostname = process.env[ENV_BRIDGE_HOST] || DEFAULT_LOCALHOST;
 
 	let port = startPort;
 	let server: Server<unknown> | undefined;
 
 	while (port <= BRIDGE_PORT_RANGE[1]) {
-		if (process.env.ARRPC_DEBUG) log("trying port", port);
+		if (process.env[ENV_DEBUG]) log("trying port", port);
 
 		try {
 			server = serve({

@@ -1,28 +1,27 @@
 #!/usr/bin/env bun
 
 import * as Bridge from "./bridge";
+import { DEFAULT_VERSION, ENV_DEBUG } from "./constants";
 import Server from "./server";
 import { log } from "./utils";
 
-let version = "unknown";
+let version = DEFAULT_VERSION;
 try {
 	const pkg = await import("../package.json", { with: { type: "json" } });
 	version = pkg.default.version;
 } catch {
-	version = "unknown";
+	version = DEFAULT_VERSION;
 }
 
 log(`arRPC-Bun v${version}`);
 
-Bridge.init();
-
 (async () => {
-	// biome-ignore lint/suspicious/noTsIgnore: ts(80007) await is needed for async constructor
-	// @ts-ignore - Server constructor returns Promise via async IIFE pattern
+	await Bridge.init();
+
 	const server = await new Server();
 
 	server.on("activity", (data) => {
-		if (process.env.ARRPC_DEBUG) {
+		if (process.env[ENV_DEBUG]) {
 			log("activity event received, forwarding to bridge:", data);
 		}
 		Bridge.send(data);

@@ -1,5 +1,11 @@
 import { file } from "bun";
-import { DETECTABLE_DB_PATH, PROCESS_SCAN_INTERVAL } from "../constants";
+import {
+	DETECTABLE_DB_PATH,
+	EXECUTABLE_ARCH_SUFFIXES,
+	EXECUTABLE_EXACT_MATCH_PREFIX,
+	PROCESS_COLOR,
+	PROCESS_SCAN_INTERVAL,
+} from "../constants";
 import type {
 	DetectableApp,
 	ExtendedSocket,
@@ -10,7 +16,7 @@ import { createLogger } from "../utils";
 
 import * as Natives from "./native/index";
 
-const log = createLogger("process", 237, 66, 69);
+const log = createLogger("process", ...PROCESS_COLOR);
 
 const DetectableDB = (await file(DETECTABLE_DB_PATH).json()) as DetectableApp[];
 
@@ -58,10 +64,9 @@ export default class ProcessServer {
 			}
 
 			for (const p of toCompare.slice()) {
-				toCompare.push(p.replace("64", ""));
-				toCompare.push(p.replace(".x64", ""));
-				toCompare.push(p.replace("x64", ""));
-				toCompare.push(p.replace("_64", ""));
+				for (const suffix of EXECUTABLE_ARCH_SUFFIXES) {
+					toCompare.push(p.replace(suffix, ""));
+				}
 			}
 
 			for (const { executables, id, name } of DetectableDB) {
@@ -71,7 +76,7 @@ export default class ProcessServer {
 					const firstCompare = toCompare[0];
 					if (!firstChar || !firstCompare) return false;
 					if (
-						firstChar === ">"
+						firstChar === EXECUTABLE_EXACT_MATCH_PREFIX
 							? x.name.substring(1) !== firstCompare
 							: !toCompare.some((y) => x.name === y)
 					) {
@@ -89,7 +94,7 @@ export default class ProcessServer {
 						const firstCompare = toCompare[0];
 						if (!firstChar || !firstCompare) return false;
 						if (
-							firstChar === ">"
+							firstChar === EXECUTABLE_EXACT_MATCH_PREFIX
 								? x.name.substring(1) !== firstCompare
 								: !toCompare.some((y) => x.name === y)
 						) {
