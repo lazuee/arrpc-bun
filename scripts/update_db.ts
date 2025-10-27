@@ -21,38 +21,6 @@ if (!response.ok) {
 
 const updated = (await response.json()) as DetectableApp[];
 
-const hasOBSInCurrent = current.some(
-	(app) => app.id === "STREAMERMODE" || app.name === "OBS",
-);
-
-const hasOBSInUpdated = updated.some(
-	(app) => app.id === "STREAMERMODE" || app.name === "OBS",
-);
-
-if (!hasOBSInUpdated) {
-	if (hasOBSInCurrent) {
-		const obsEntry = current.find(
-			(app) => app.id === "STREAMERMODE" || app.name === "OBS",
-		);
-		if (obsEntry) {
-			updated.push(obsEntry);
-		}
-	} else {
-		updated.push({
-			aliases: ["Obs"],
-			executables: [
-				{ is_launcher: false, name: "obs", os: "linux" },
-				{ is_launcher: false, name: "obs.exe", os: "win32" },
-				{ is_launcher: false, name: "obs.app", os: "darwin" },
-			],
-			hook: true,
-			id: "STREAMERMODE",
-			name: "OBS",
-		});
-		console.log("Added custom OBS StreamerMode entry");
-	}
-}
-
 await write(path, JSON.stringify(updated, null, 2));
 
 console.log("Updated detectable DB");
