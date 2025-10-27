@@ -184,7 +184,6 @@ async function getAvailableSocket(tries = 0): Promise<string> {
 
 export default class IPCServer {
 	private handlers!: Handlers;
-	private server?: Server;
 
 	private constructor() {}
 
@@ -205,7 +204,6 @@ export default class IPCServer {
 		return new Promise((resolve) => {
 			server.listen(socketPath, () => {
 				log("listening at", socketPath);
-				ipcServer.server = server;
 				resolve(ipcServer);
 			});
 		});

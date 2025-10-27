@@ -36,7 +36,6 @@ const pids: Record<string, number> = {};
 
 export default class ProcessServer {
 	private handlers!: Handlers;
-	private intervalId?: Timer;
 
 	constructor(handlers: Handlers) {
 		if (!Native) return;
@@ -45,7 +44,7 @@ export default class ProcessServer {
 		this.scan = this.scan.bind(this);
 
 		this.scan();
-		this.intervalId = setInterval(this.scan, PROCESS_SCAN_INTERVAL);
+		setInterval(this.scan, PROCESS_SCAN_INTERVAL);
 
 		log("started");
 	}

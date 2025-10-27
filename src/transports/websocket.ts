@@ -135,6 +135,10 @@ export default class WSServer {
 		}
 	}
 
+	getPort(): number | undefined {
+		return this.server?.port;
+	}
+
 	onConnection(
 		ws: ServerWebSocket<{
 			clientId: string;
