@@ -1,5 +1,5 @@
 import { file, write } from "bun";
-import type { DetectableApp } from "../src/types/index.d.ts";
+import type { DetectableApp } from "../src/types";
 
 import { getDetectableDbPath } from "../src/constants";
 

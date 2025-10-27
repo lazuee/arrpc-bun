@@ -48,10 +48,6 @@ function sendMessage(
 }
 
 export default class RPCServer extends EventEmitter {
-	private ipc?: IPCServer;
-	private ws?: WSServer;
-	private process?: ProcessServer;
-
 	private constructor() {
 		super();
 	}
@@ -69,14 +65,14 @@ export default class RPCServer extends EventEmitter {
 			close: server.onClose,
 		};
 
-		server.ws = new WSServer(handlers);
-		server.ipc = await IPCServer.create(handlers);
+		new WSServer(handlers);
+		await IPCServer.create(handlers);
 
 		if (
 			!process.argv.includes(CLI_ARG_NO_PROCESS_SCANNING) &&
 			!env[ENV_NO_PROCESS_SCANNING]
 		) {
-			server.process = new ProcessServer(handlers);
+			new ProcessServer(handlers);
 		}
 
 		return server;
