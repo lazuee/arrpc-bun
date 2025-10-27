@@ -52,7 +52,11 @@ function matchesExecutable(
 		if (strictArgs) {
 			return argsMatch; // must match exactly
 		}
-		// arguments are advisory, name match is enough
+		// in lenient mode: for generic executables (like >java, >python),
+		// still require arguments to match to avoid false positives
+		if (firstChar === EXECUTABLE_EXACT_MATCH_PREFIX && !argsMatch) {
+			return false;
+		}
 	}
 
 	return true;
