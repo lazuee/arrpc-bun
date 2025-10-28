@@ -1,5 +1,8 @@
 import type { ProcessInfo } from "../../types";
 
+const winExePathRegex =
+  /((?:(?:[a-zA-Z]\:|\\\\[\w\s\.]+\\[\w\s\.$]+)\\(?:[\w\s\.]+\\)*)(?:[\w\s\.]*?)\.exe)/;
+
 function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 	const appIndex = cmdline.toLowerCase().indexOf(".app");
 	if (appIndex !== -1) {
@@ -35,6 +38,18 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 		const args = restOfLine ? restOfLine.split(/\s+/) : [];
 
 		return { exe: appPath, args };
+	}
+	
+	// support wine
+	if (winExePathRegex.test(cmdline)) {
+		// extract windows executable path
+		const exePath = cmdline.match(winExePathRegex)?.[0];
+		if (exePath) {
+			const exePathIdx = cmdline.indexOf(exePath);
+			const restOfLine = cmdline.substring(exePathIdx + exePath.length).trim();
+			const args = restOfLine ? restOfLine.split(/\s+/) : [];
+			return { exe: exePath, args };
+		}
 	}
 
 	//simple whitespace split for non-.app executables
