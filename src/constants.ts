@@ -68,7 +68,7 @@ export function getDetectableDbPath(): string {
 }
 
 export function getCustomDbPath(): string {
-	return "./detectable_fixes.json";
+	return join(import.meta.dirname, "..", "detectable_fixes.json");
 }
 
 // enums
