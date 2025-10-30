@@ -7,6 +7,7 @@ export const ENV_BRIDGE_PORT = "ARRPC_BRIDGE_PORT";
 export const ENV_BRIDGE_HOST = "ARRPC_BRIDGE_HOST";
 export const ENV_WEBSOCKET_HOST = "ARRPC_WEBSOCKET_HOST";
 export const ENV_NO_BRIDGE = "ARRPC_NO_BRIDGE";
+export const ENV_DATA_DIR = "ARRPC_DATA_DIR";
 
 // CLI Arguments
 export const CLI_ARG_NO_PROCESS_SCANNING = "--no-process-scanning";
@@ -64,10 +65,18 @@ export const PROCESS_COLOR: [number, number, number] = [237, 66, 69];
 
 // file paths
 export function getDetectableDbPath(): string {
+	const dataDir = process.env[ENV_DATA_DIR];
+	if (dataDir) {
+		return join(dataDir, "detectable.json");
+	}
 	return join(import.meta.dirname, "..", "detectable.json");
 }
 
 export function getCustomDbPath(): string {
+	const dataDir = process.env[ENV_DATA_DIR];
+	if (dataDir) {
+		return join(dataDir, "detectable_fixes.json");
+	}
 	return join(import.meta.dirname, "..", "detectable_fixes.json");
 }
 
