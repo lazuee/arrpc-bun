@@ -87,6 +87,7 @@ function matchesExecutable(
 	args: string[] | null,
 	checkLauncher: boolean,
 	strictArgs = true,
+	parallels: undefined | { name: string } = undefined
 ): boolean {
 	if (executable.is_launcher !== checkLauncher) return false;
 
@@ -95,6 +96,13 @@ function matchesExecutable(
 	const firstChar = executable.name[0];
 	const firstCompare = toCompare[0];
 	if (!firstChar || !firstCompare) return false;
+
+	if (parallels?.name) {
+		if (firstCompare.endsWith(".app_parallels")) { // match parallels app only
+			const parallelName = firstCompare.replace(".app_parallels", "");
+			return parallels.name.toLowerCase() === parallelName; // game name must match exactly
+		}
+	}
 
 	const nameMatches =
 		firstChar === EXECUTABLE_EXACT_MATCH_PREFIX
@@ -188,6 +196,14 @@ export default class ProcessServer {
 					matched =
 						executables?.some((x) =>
 							matchesExecutable(x, toCompare, args, true, false),
+						) ?? false;
+				}
+
+				if (!matched && process.platform === "darwin") { // support Parallels Desktop (Mac)
+					// try non-launcher executables with parallels app name
+					matched =
+						executables?.some((x) =>
+							matchesExecutable(x, toCompare, args, false, false, { name }),
 						) ?? false;
 				}
 
