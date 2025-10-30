@@ -33,9 +33,14 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 		}
 
 		// extract just the .app bundle path (not the full Contents/MacOS/... path)
-		const appPath = cmdline.substring(0, appIndex + 4); // Just up to .app
+		let appPath = cmdline.substring(0, appIndex + 4); // Just up to .app
 		const restOfLine = cmdline.substring(pathEnd).trim();
 		const args = restOfLine ? restOfLine.split(/\s+/) : [];
+		
+		// support Parallels Desktop - Coherence mode
+		if (appPath.includes("Applications (Parallels)")) {
+			appPath += "_parallels";
+		}
 
 		return { exe: appPath, args };
 	}
