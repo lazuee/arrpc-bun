@@ -39,7 +39,11 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 		
 		// support Parallels Desktop - Coherence mode
 		if (appPath.includes("Applications (Parallels)")) {
-			appPath += "_parallels";
+			if (appPath.endsWith(".exe.app")) {
+				appPath = appPath.replace(".app", ""); // executable name
+			} else {
+				appPath += "_parallel"; // game name
+			}
 		}
 
 		return { exe: appPath, args };
