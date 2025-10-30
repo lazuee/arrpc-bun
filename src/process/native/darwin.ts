@@ -36,7 +36,7 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 		let appPath = cmdline.substring(0, appIndex + 4); // Just up to .app
 		const restOfLine = cmdline.substring(pathEnd).trim();
 		const args = restOfLine ? restOfLine.split(/\s+/) : [];
-		
+
 		// support Parallels Desktop - Coherence mode
 		if (appPath.includes("Applications (Parallels)")) {
 			if (appPath.endsWith(".exe.app")) {
