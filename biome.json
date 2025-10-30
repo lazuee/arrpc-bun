@@ -12,7 +12,8 @@
 			"!**/dist",
 			"!**/ext",
 			"!**/examples",
-			"!**/detectable.json"
+			"!**/detectable.json",
+			"!**/detectable_fixes.json"
 		],
 		"maxSize": 5242880
 	},
