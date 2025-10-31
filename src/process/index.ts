@@ -86,8 +86,8 @@ function matchesExecutable(
 	toCompare: string[],
 	args: string[] | null,
 	checkLauncher: boolean,
-	strictArgs = true,
-	parallels: undefined | { name: string } = undefined,
+	checkParallels: boolean,
+	strictArgs: boolean,
 ): boolean {
 	if (executable.is_launcher !== checkLauncher) return false;
 
@@ -95,13 +95,14 @@ function matchesExecutable(
 
 	const firstChar = executable.name[0];
 	const firstCompare = toCompare[0];
+
 	if (!firstChar || !firstCompare) return false;
 
-	if (parallels?.name) {
+	if (checkParallels) {
 		// match parallels app only
 		if (firstCompare.endsWith(".app_parallels")) {
 			const parallelName = firstCompare.replace(".app_parallels", "");
-			return parallels.name.toLowerCase() === parallelName; // game name must match exactly
+			return executable.name.toLowerCase() === parallelName; // app name must match exactly
 		}
 	}
 
@@ -171,14 +172,28 @@ export default class ProcessServer {
 				// try non-launcher executables with strict args first
 				let matched =
 					executables?.some((x) =>
-						matchesExecutable(x, toCompare, args, false, true),
+						matchesExecutable(
+							x,
+							toCompare,
+							args,
+							false,
+							false,
+							true,
+						),
 					) ?? false;
 
 				// try launcher executables with strict args
 				if (!matched) {
 					matched =
 						executables?.some((x) =>
-							matchesExecutable(x, toCompare, args, true, true),
+							matchesExecutable(
+								x,
+								toCompare,
+								args,
+								true,
+								false,
+								true,
+							),
 						) ?? false;
 				}
 
@@ -188,7 +203,14 @@ export default class ProcessServer {
 					// try non-launcher executables without strict args
 					matched =
 						executables?.some((x) =>
-							matchesExecutable(x, toCompare, args, false, false),
+							matchesExecutable(
+								x,
+								toCompare,
+								args,
+								false,
+								false,
+								false,
+							),
 						) ?? false;
 				}
 
@@ -196,23 +218,28 @@ export default class ProcessServer {
 				if (!matched) {
 					matched =
 						executables?.some((x) =>
-							matchesExecutable(x, toCompare, args, true, false),
+							matchesExecutable(
+								x,
+								toCompare,
+								args,
+								true,
+								false,
+								false,
+							),
 						) ?? false;
 				}
 
 				// support Parallels Desktop (Mac)
 				if (!matched && process.platform === "darwin") {
-					// try non-launcher executables with parallels app name
+					// try app name
 					matched =
-						executables?.some((x) =>
-							matchesExecutable(
-								x,
-								toCompare,
-								args,
-								false,
-								false,
-								{ name },
-							),
+						matchesExecutable(
+							{ name, is_launcher: false },
+							toCompare,
+							args,
+							false,
+							true,
+							false,
 						) ?? false;
 				}
 

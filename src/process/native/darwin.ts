@@ -1,8 +1,11 @@
+import { homedir } from "node:os";
+import { resolve } from "node:path";
 import { spawn } from "bun";
 import type { ProcessInfo } from "../../types";
 
 const winExePathRegex =
 	/((?:(?:[a-zA-Z]:|\\\\[\w\s.]+\\[\w\s.$]+)\\(?:[\w\s.]+\\)*)(?:[\w\s.]*?)\.exe)/;
+const parallelsDir = resolve(homedir(), "Applications (Parallels)");
 
 function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 	const appIndex = cmdline.toLowerCase().indexOf(".app");
@@ -39,11 +42,11 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 		const args = restOfLine ? restOfLine.split(/\s+/) : [];
 
 		// support Parallels Desktop - Coherence mode
-		if (appPath.includes("Applications (Parallels)")) {
+		if (appPath.startsWith(parallelsDir)) {
 			if (appPath.endsWith(".exe.app")) {
 				appPath = appPath.replace(".app", ""); // executable name
 			} else {
-				appPath += "_parallel"; // game name
+				appPath += "_parallels"; // app name
 			}
 		}
 
