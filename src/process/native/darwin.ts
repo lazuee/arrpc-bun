@@ -42,7 +42,7 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 			if (appPath.endsWith(".exe.app")) {
 				appPath = appPath.replace(".app", ""); // executable name
 			} else {
-				appPath += "_parallel"; // game name
+				appPath += "_parallels"; // game name
 			}
 		}
 
