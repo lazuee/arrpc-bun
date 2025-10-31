@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawnSync } from "bun";
 
 let hypervDetected: boolean | null = null;
 
@@ -12,27 +12,25 @@ export function isHyperVEnabled(): boolean {
 	}
 
 	try {
-		const result = spawnSync("sc", ["query", "vmms"], {
-			encoding: "utf8",
-			timeout: 2000,
+		const result = spawnSync(["sc", "query", "vmms"], {
+			stdout: "pipe",
 			windowsHide: true,
 		});
 
-		if (result.status === 0 && result.stdout) {
-			const output = result.stdout.toLowerCase();
+		if (result.exitCode === 0 && result.stdout) {
+			const output = result.stdout.toString().toLowerCase();
 			if (output.includes("running")) {
 				hypervDetected = true;
 				return true;
 			}
 		}
 
-		const wslResult = spawnSync("wsl", ["--status"], {
-			encoding: "utf8",
-			timeout: 2000,
+		const wslResult = spawnSync(["wsl", "--status"], {
+			stdout: "pipe",
 			windowsHide: true,
 		});
 
-		if (wslResult.status === 0) {
+		if (wslResult.exitCode === 0) {
 			hypervDetected = true;
 			return true;
 		}

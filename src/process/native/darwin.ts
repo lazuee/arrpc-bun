@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { spawn } from "bun";
 import type { ProcessInfo } from "../../types";
 
 const winExePathRegex =
@@ -80,7 +81,7 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
 	try {
-		const proc = Bun.spawn(["ps", "-awwxo", "pid=,args="]);
+		const proc = spawn(["ps", "-awwxo", "pid=,args="]);
 		const output = await new Response(proc.stdout).text();
 		const lines = output.split("\n");
 

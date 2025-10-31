@@ -1,7 +1,6 @@
-import { unlinkSync } from "node:fs";
 import { createConnection, createServer, type Socket } from "node:net";
 import { join } from "node:path";
-import { env } from "bun";
+import { env, file } from "bun";
 import {
 	ENV_DEBUG,
 	IPC_COLOR,
@@ -164,7 +163,7 @@ async function getAvailableSocket(tries = 0): Promise<string> {
 	if (await socketIsAvailable(socket)) {
 		if (process.platform !== "win32") {
 			try {
-				unlinkSync(path);
+				await file(path).unlink();
 			} catch (e: unknown) {
 				if (env[ENV_DEBUG]) log("error unlinking socket", e);
 			}
