@@ -45,7 +45,8 @@
 			},
 			"suspicious": {
 				"noVar": "error",
-				"noExplicitAny": "warn"
+				"noExplicitAny": "warn",
+				"noNonNullAssertedOptionalChain": "warn"
 			},
 			"style": {
 				"useConst": "error",
