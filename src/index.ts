@@ -1,6 +1,6 @@
 import { env } from "bun";
 import { init as initBridge, send as sendToBridge } from "./bridge";
-import { DEFAULT_VERSION, ENV_DEBUG } from "./constants";
+import { DEFAULT_VERSION, ENV_DEBUG, ENV_IPC_MODE } from "./constants";
 import Server from "./server";
 import { log } from "./utils";
 
@@ -24,6 +24,15 @@ server.on("activity", (data) => {
 	}
 	sendToBridge(data);
 });
+
+if (env[ENV_IPC_MODE]) {
+	process.stderr.write(JSON.stringify({
+		type: "READY",
+		data: {
+			version
+		}
+	}) + '\n');
+}
 
 const shutdown = () => {
 	log("received shutdown signal");

@@ -3,6 +3,7 @@ import {
 	ALLOWED_DISCORD_ORIGINS,
 	DEFAULT_LOCALHOST,
 	ENV_DEBUG,
+	ENV_IPC_MODE,
 	ENV_WEBSOCKET_HOST,
 	RPC_PROTOCOL_VERSION,
 	WEBSOCKET_COLOR,
@@ -119,6 +120,20 @@ export default class WSServer {
 
 				log("listening on", port);
 				this.server = server;
+
+				if (env[ENV_IPC_MODE]) {
+					process.stderr.write(
+						JSON.stringify({
+							type: "SERVER_INFO",
+							data: {
+								port: server.port,
+								host: hostname,
+								service: "websocket",
+							},
+						}) + "\n",
+					);
+				}
+
 				break;
 			} catch (e) {
 				const error = e as { code?: string; message?: string };

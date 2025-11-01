@@ -7,6 +7,7 @@ import {
 	ENV_BRIDGE_HOST,
 	ENV_BRIDGE_PORT,
 	ENV_DEBUG,
+	ENV_IPC_MODE,
 	ENV_NO_BRIDGE,
 } from "./constants";
 import { isHyperVEnabled } from "./platform";
@@ -100,6 +101,20 @@ export async function init(): Promise<void> {
 
 			bridgeServer = server;
 			log("listening on", port);
+
+			if (env[ENV_IPC_MODE]) {
+				process.stderr.write(
+					JSON.stringify({
+						type: "SERVER_INFO",
+						data: {
+							port: server.port,
+							host: hostname,
+							service: "bridge",
+						},
+					}) + "\n",
+				);
+			}
+
 			break;
 		} catch (e) {
 			const error = e as { code?: string; message?: string };

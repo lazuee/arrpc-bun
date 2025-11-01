@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { env, file } from "bun";
 import {
 	ENV_DEBUG,
+	ENV_IPC_MODE,
 	IPC_COLOR,
 	IPC_HEADER_SIZE,
 	IPC_MAX_RETRIES,
@@ -197,6 +198,19 @@ export default class IPCServer {
 		return new Promise((resolve) => {
 			server.listen(socketPath, () => {
 				log("listening at", socketPath);
+
+				if (env[ENV_IPC_MODE]) {
+					process.stderr.write(
+						JSON.stringify({
+							type: "SERVER_INFO",
+							data: {
+								socketPath: socketPath,
+								service: "ipc",
+							},
+						}) + "\n",
+					);
+				}
+
 				resolve(ipcServer);
 			});
 		});
