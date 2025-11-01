@@ -132,7 +132,6 @@ export default class RPCServer extends EventEmitter {
 			log("process activity event", { socketId, activity, pid, name });
 		}
 
-		// convert timestamps if needed (for process-detected games)
 		if (
 			activity &&
 			typeof activity === "object" &&
@@ -145,8 +144,6 @@ export default class RPCServer extends EventEmitter {
 				for (const x in timestamps) {
 					const key = x as keyof typeof timestamps;
 					const value = timestamps[key];
-					// convert seconds to milliseconds if needed
-					// values less than 10000000000 are likely in seconds (before year 2286)
 					if (value && value < 10000000000) {
 						timestamps[key] = value * 1000;
 					}
@@ -232,8 +229,6 @@ export default class RPCServer extends EventEmitter {
 					for (const x in timestamps) {
 						const key = x as keyof typeof timestamps;
 						const value = timestamps[key];
-						// convert seconds to milliseconds if needed
-						// values less than 10000000000 are likely in seconds (before year 2286)
 						if (value && value < 10000000000) {
 							timestamps[key] = (value * 1000) as typeof value;
 						}

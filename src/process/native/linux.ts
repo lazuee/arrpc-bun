@@ -1,5 +1,5 @@
 import { readlinkSync } from "node:fs";
-import { Glob } from "bun";
+import { file, Glob } from "bun";
 import { CMDLINE_NULL_SEPARATOR, LINUX_PROC_DIR } from "../../constants";
 import type { ProcessInfo } from "../../types";
 
@@ -15,8 +15,9 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 		if (pidNum <= 0) continue;
 
 		try {
-			const cmdlineFile = Bun.file(`${LINUX_PROC_DIR}/${pid}/cmdline`);
-			const cmdline = await cmdlineFile.text();
+			const cmdline = await file(
+				`${LINUX_PROC_DIR}/${pid}/cmdline`,
+			).text();
 
 			if (!cmdline) continue;
 
@@ -35,16 +36,12 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 						exePath = exeLink;
 					}
 				}
-			} catch {
-				// permission denied or symlink doesn't exist, use cmdline[0]
-			}
+			} catch {}
 
 			if (exePath) {
 				processes.push([pidNum, exePath, parts.slice(1)]);
 			}
-		} catch {
-			// skip inaccessible processes
-		}
+		} catch {}
 	}
 
 	return processes;

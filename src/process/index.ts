@@ -101,9 +101,7 @@ async function loadDatabase(): Promise<void> {
 					(await customFile.json()) as Partial<DetectableApp>[];
 				mergeCustomEntries(customEntries, "detectable_fixes.json");
 			}
-		} catch {
-			// ignore errors
-		}
+		} catch {}
 
 		buildExecutableIndex();
 		dbLoaded = true;
@@ -153,18 +151,15 @@ function matchesExecutable(
 ): boolean {
 	if (executable.is_launcher !== checkLauncher) return false;
 
-	// if (executable.os && executable.os !== process.platform) return false;
-
 	const firstChar = executable.name[0];
 	const firstCompare = toCompare[0];
 
 	if (!firstChar || !firstCompare) return false;
 
 	if (checkParallels) {
-		// match parallels app only
 		if (firstCompare.endsWith(".app_parallels")) {
 			const parallelName = firstCompare.replace(".app_parallels", "");
-			return executable.name.toLowerCase() === parallelName; // app name must match exactly
+			return executable.name.toLowerCase() === parallelName;
 		}
 	}
 
@@ -178,10 +173,8 @@ function matchesExecutable(
 	if (args && executable.arguments) {
 		const argsMatch = argsContainString(args, executable.arguments);
 		if (strictArgs) {
-			return argsMatch; // must match exactly
+			return argsMatch;
 		}
-		// in lenient mode: for generic executables (like >java, >python),
-		// still require arguments to match to avoid false positives
 		if (firstChar === EXECUTABLE_EXACT_MATCH_PREFIX && !argsMatch) {
 			return false;
 		}
@@ -291,8 +284,6 @@ export default class ProcessServer {
 			const candidateApps = this.getCandidateApps(toCompare);
 
 			for (const { executables, id, name } of candidateApps) {
-				// prioritize exact matches (with strict argument checking)
-				// try non-launcher executables with strict args first
 				let matched =
 					executables?.some((x) =>
 						matchesExecutable(
@@ -305,7 +296,6 @@ export default class ProcessServer {
 						),
 					) ?? false;
 
-				// try launcher executables with strict args
 				if (!matched) {
 					matched =
 						executables?.some((x) =>
@@ -320,10 +310,7 @@ export default class ProcessServer {
 						) ?? false;
 				}
 
-				// fall back to lenient matching (name-only, ignore argument mismatches)
-				// this handles cases where Discord's database has outdated argument requirements
 				if (!matched) {
-					// try non-launcher executables without strict args
 					matched =
 						executables?.some((x) =>
 							matchesExecutable(
@@ -337,7 +324,6 @@ export default class ProcessServer {
 						) ?? false;
 				}
 
-				// try launcher executables without strict args
 				if (!matched) {
 					matched =
 						executables?.some((x) =>
@@ -352,9 +338,7 @@ export default class ProcessServer {
 						) ?? false;
 				}
 
-				// support Parallels Desktop (Mac)
 				if (!matched && process.platform === "darwin") {
-					// try app name
 					matched =
 						matchesExecutable(
 							{ name, is_launcher: false },

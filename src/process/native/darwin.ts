@@ -36,26 +36,22 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 			}
 		}
 
-		// extract just the .app bundle path (not the full Contents/MacOS/... path)
-		let appPath = cmdline.substring(0, appIndex + 4); // Just up to .app
+		let appPath = cmdline.substring(0, appIndex + 4);
 		const restOfLine = cmdline.substring(pathEnd).trim();
 		const args = restOfLine ? restOfLine.split(/\s+/) : [];
 
-		// support Parallels Desktop - Coherence mode
 		if (appPath.startsWith(parallelsDir)) {
 			if (appPath.endsWith(".exe.app")) {
-				appPath = appPath.replace(".app", ""); // executable name
+				appPath = appPath.replace(".app", "");
 			} else {
-				appPath += "_parallels"; // app name
+				appPath += "_parallels";
 			}
 		}
 
 		return { exe: appPath, args };
 	}
 
-	// support wine
 	if (winExePathRegex.test(cmdline)) {
-		// extract windows executable path
 		const exePath = cmdline.match(winExePathRegex)?.[0];
 		if (exePath) {
 			const exePathIdx = cmdline.indexOf(exePath);
@@ -67,7 +63,6 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 		}
 	}
 
-	//simple whitespace split for non-.app executables
 	const parts = cmdline.split(/\s+/).filter(Boolean);
 	if (parts.length === 0) {
 		return { exe: "", args: [] };
@@ -102,7 +97,6 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 
 			if (Number.isNaN(pidNum) || pidNum <= 0) continue;
 
-			// filter out kernel processes and empty commands
 			if (
 				!cmdline ||
 				cmdline.startsWith("[") ||

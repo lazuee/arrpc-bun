@@ -34,9 +34,7 @@ export function isHyperVEnabled(): boolean {
 			hypervDetected = true;
 			return true;
 		}
-	} catch {
-		// assume no Hyper-V for safety
-	}
+	} catch {}
 
 	hypervDetected = false;
 	return false;

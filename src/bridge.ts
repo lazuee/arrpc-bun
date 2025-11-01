@@ -90,9 +90,7 @@ export async function init(): Promise<void> {
 							}
 						}
 					},
-					message() {
-						// bridge doesn't handle incoming messages
-					},
+					message() {},
 					close(ws) {
 						log("web disconnected");
 						clients.delete(ws);

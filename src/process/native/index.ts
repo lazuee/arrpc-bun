@@ -1,4 +1,3 @@
-// conditionally import platform-specific modules to avoid loading FFI libraries on wrong platforms
 export const linux =
 	process.platform === "linux" ? await import("./linux") : undefined;
 export const win32 =
