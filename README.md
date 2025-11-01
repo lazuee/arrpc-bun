@@ -4,6 +4,8 @@
     <img alt="arRPC" src="https://user-images.githubusercontent.com/19228318/203024061-064fc015-9096-40c3-9786-ad23d90414a6.png" width=300>
   </picture> <br>
   <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+  <a href="https://aur.archlinux.org/packages/arrpc-bun"><img alt="AUR version" src="https://img.shields.io/aur/version/arrpc-bun"></a>
+  <a href="https://aur.archlinux.org/packages/arrpc-bun-bin"><img alt="AUR version (bin)" src="https://img.shields.io/aur/version/arrpc-bun-bin"></a>
   <h3>Open Discord RPC server for custom clients</h3>
   <h5>TypeScript + Bun</h5>
 </div>
