@@ -1,6 +1,6 @@
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/19228318/202900211-95e8474b-edbb-4048-ba0b-a581a6d57fc4.png" width=300>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Creationsss/arrpc-bun/refs/heads/main/assets/logo.png" width=300>
     <img alt="arRPC" src="https://raw.githubusercontent.com/Creationsss/arrpc-bun/refs/heads/main/assets/logo.png" width=300>
   </picture> <br>
   <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
@@ -77,3 +77,4 @@ ARRPC_DEBUG=1 bun start
 MIT
 
 Based on [arRPC](https://github.com/OpenAsar/arrpc) by OpenAsar
+
