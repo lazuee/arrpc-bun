@@ -21,6 +21,7 @@
 		"src/",
 		"scripts/",
 		"detectable.json",
+		"detectable_fixes.json",
 		"LICENSE",
 		"README.md"
 	],

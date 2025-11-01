@@ -26,12 +26,14 @@ server.on("activity", (data) => {
 });
 
 if (env[ENV_IPC_MODE]) {
-	process.stderr.write(JSON.stringify({
-		type: "READY",
-		data: {
-			version
-		}
-	}) + '\n');
+	process.stderr.write(
+		`${JSON.stringify({
+			type: "READY",
+			data: {
+				version,
+			},
+		})}\n`,
+	);
 }
 
 const shutdown = () => {

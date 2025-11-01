@@ -48,6 +48,41 @@ export const EXECUTABLE_EXACT_MATCH_PREFIX = ">";
 export const LINUX_PROC_DIR = "/proc";
 export const CMDLINE_NULL_SEPARATOR = "\0";
 
+export const ANTI_CHEAT_EXECUTABLES = [
+	"easyanticheat",
+	"eac_launcher",
+	"easyanticheat_eos",
+	"battleye",
+	"beclient",
+	"nprotect",
+	"xigncode",
+	"gameguard",
+	"vanguard",
+	"anticheattoolkit",
+];
+
+export const SYSTEM_EXECUTABLES = new Set([
+	"system",
+	"registry",
+	"smss.exe",
+	"csrss.exe",
+	"wininit.exe",
+	"services.exe",
+	"lsass.exe",
+	"svchost.exe",
+	"dwm.exe",
+	"conhost.exe",
+	"taskhost.exe",
+	"winlogon.exe",
+	"fontdrvhost.exe",
+	"sihost.exe",
+	"ctfmon.exe",
+	"taskhostw.exe",
+	"runtimebroker.exe",
+	"searchindexer.exe",
+	"searchprotocolhost.exe",
+]);
+
 export const ARRPC_BRAND_COLOR: [number, number, number] = [88, 101, 242];
 export const SERVER_COLOR: [number, number, number] = [87, 242, 135];
 export const BRIDGE_COLOR: [number, number, number] = [87, 242, 135];

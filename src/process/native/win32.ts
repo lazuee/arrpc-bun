@@ -1,5 +1,5 @@
 import { dlopen, FFIType, type Pointer, suffix } from "bun:ffi";
-import { PROCESS_COLOR } from "../../constants";
+import { PROCESS_COLOR, SYSTEM_EXECUTABLES } from "../../constants";
 import type { ProcessInfo } from "../../types";
 import { createLogger } from "../../utils";
 
@@ -55,31 +55,10 @@ const sizeBuffer = new Uint32Array([MAX_PATH]);
 const cmdLineInfoBuffer = new Uint8Array(8192);
 const returnLength = new Uint32Array(1);
 
+// @ts-expect-error utf-16le is supported by Bun but not in TS lib types
 const utf16Decoder = new TextDecoder("utf-16le");
 
 const failedOpens = new Set<number>();
-
-const SYSTEM_EXECUTABLES = new Set([
-	"system",
-	"registry",
-	"smss.exe",
-	"csrss.exe",
-	"wininit.exe",
-	"services.exe",
-	"lsass.exe",
-	"svchost.exe",
-	"dwm.exe",
-	"conhost.exe",
-	"taskhost.exe",
-	"winlogon.exe",
-	"fontdrvhost.exe",
-	"sihost.exe",
-	"ctfmon.exe",
-	"taskhostw.exe",
-	"runtimebroker.exe",
-	"searchindexer.exe",
-	"searchprotocolhost.exe",
-]);
 
 function readWideString(
 	buffer: Uint8Array,

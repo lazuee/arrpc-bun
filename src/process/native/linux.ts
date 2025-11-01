@@ -1,6 +1,10 @@
 import { readlinkSync } from "node:fs";
 import { file, Glob } from "bun";
-import { CMDLINE_NULL_SEPARATOR, LINUX_PROC_DIR } from "../../constants";
+import {
+	ANTI_CHEAT_EXECUTABLES,
+	CMDLINE_NULL_SEPARATOR,
+	LINUX_PROC_DIR,
+} from "../../constants";
 import type { ProcessInfo } from "../../types";
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
@@ -39,7 +43,17 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 			} catch {}
 
 			if (exePath) {
-				processes.push([pidNum, exePath, parts.slice(1)]);
+				const exePathLower = exePath.toLowerCase();
+				const cmdlineLower = cmdline.toLowerCase();
+
+				const isAntiCheat = ANTI_CHEAT_EXECUTABLES.some(
+					(ac) =>
+						exePathLower.includes(ac) || cmdlineLower.includes(ac),
+				);
+
+				if (!isAntiCheat) {
+					processes.push([pidNum, exePath, parts.slice(1)]);
+				}
 			}
 		} catch {}
 	}

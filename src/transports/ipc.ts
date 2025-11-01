@@ -201,13 +201,13 @@ export default class IPCServer {
 
 				if (env[ENV_IPC_MODE]) {
 					process.stderr.write(
-						JSON.stringify({
+						`${JSON.stringify({
 							type: "SERVER_INFO",
 							data: {
 								socketPath: socketPath,
 								service: "ipc",
 							},
-						}) + "\n",
+						})}\n`,
 					);
 				}
 

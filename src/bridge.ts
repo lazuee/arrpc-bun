@@ -104,14 +104,14 @@ export async function init(): Promise<void> {
 
 			if (env[ENV_IPC_MODE]) {
 				process.stderr.write(
-					JSON.stringify({
+					`${JSON.stringify({
 						type: "SERVER_INFO",
 						data: {
 							port: server.port,
 							host: hostname,
 							service: "bridge",
 						},
-					}) + "\n",
+					})}\n`,
 				);
 			}
 
