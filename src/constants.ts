@@ -29,6 +29,7 @@ export const ENV_WEBSOCKET_HOST = "ARRPC_WEBSOCKET_HOST";
 export const ENV_NO_BRIDGE = "ARRPC_NO_BRIDGE";
 export const ENV_DATA_DIR = "ARRPC_DATA_DIR";
 export const ENV_IPC_MODE = "ARRPC_IPC_MODE";
+export const ENV_PARENT_MONITOR = "ARRPC_PARENT_MONITOR";
 
 export const CLI_ARG_NO_PROCESS_SCANNING = "--no-process-scanning";
 

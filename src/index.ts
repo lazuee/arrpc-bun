@@ -1,6 +1,11 @@
 import { env } from "bun";
 import { init as initBridge, send as sendToBridge } from "./bridge";
-import { DEFAULT_VERSION, ENV_DEBUG, ENV_IPC_MODE } from "./constants";
+import {
+	DEFAULT_VERSION,
+	ENV_DEBUG,
+	ENV_IPC_MODE,
+	ENV_PARENT_MONITOR,
+} from "./constants";
 import Server from "./server";
 import { log } from "./utils";
 
@@ -34,6 +39,77 @@ if (env[ENV_IPC_MODE]) {
 			},
 		})}\n`,
 	);
+}
+
+if (env[ENV_PARENT_MONITOR]) {
+	const initialParentPid = process.ppid;
+	let shutdownTriggered = false;
+
+	const handleParentDeath = () => {
+		if (shutdownTriggered) return;
+		shutdownTriggered = true;
+		log("parent process died, shutting down");
+		shutdown();
+	};
+
+	process.stdout.on("error", (err) => {
+		if ((err as NodeJS.ErrnoException).code === "EPIPE") {
+			handleParentDeath();
+		}
+	});
+
+	process.stderr.on("error", (err) => {
+		if ((err as NodeJS.ErrnoException).code === "EPIPE") {
+			handleParentDeath();
+		}
+	});
+
+	const parentMonitor = setInterval(() => {
+		if (shutdownTriggered) {
+			clearInterval(parentMonitor);
+			return;
+		}
+
+		const currentParentPid = process.ppid;
+		if (currentParentPid !== initialParentPid) {
+			log(
+				`parent process changed from ${initialParentPid} to ${currentParentPid}, shutting down`,
+			);
+			clearInterval(parentMonitor);
+			handleParentDeath();
+			return;
+		}
+
+		try {
+			process.kill(initialParentPid, 0);
+		} catch {
+			log(
+				`parent process ${initialParentPid} no longer exists, shutting down`,
+			);
+			clearInterval(parentMonitor);
+			handleParentDeath();
+			return;
+		}
+
+		if (env[ENV_IPC_MODE]) {
+			try {
+				const heartbeat = `${JSON.stringify({
+					type: "HEARTBEAT",
+					data: { timestamp: Date.now() },
+				})}\n`;
+				const written = process.stderr.write(heartbeat);
+				if (!written) {
+					log("heartbeat write failed, parent likely dead");
+					clearInterval(parentMonitor);
+					handleParentDeath();
+				}
+			} catch (err) {
+				log(`heartbeat error: ${err}, parent likely dead`);
+				clearInterval(parentMonitor);
+				handleParentDeath();
+			}
+		}
+	}, 2000);
 }
 
 const shutdown = () => {
