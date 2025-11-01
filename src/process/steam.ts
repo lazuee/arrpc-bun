@@ -16,7 +16,13 @@ const defaultSteamPaths =
 	process.platform === "darwin"
 		? [resolve(homedir(), "Library", "Application Support", "Steam")]
 		: process.platform === "win32"
-			? [resolve(env?.["ProgramFiles(x86)"]!, "Steam")]
+			? [
+					resolve(
+						env["ProgramFiles(x86)"] ??
+							join("C:", "Program Files (x86)"),
+						"Steam",
+					),
+				]
 			: [
 					resolve(homedir(), ".steam", "steam"),
 					resolve(homedir(), ".local", "share", "Steam"),
@@ -204,7 +210,9 @@ export async function resolveSteamApp(
 
 	for (const [installPath, appName] of steamAppLookup) {
 		const compareInstallPath =
-			process.platform === "win32" ? installPath.toLowerCase() : installPath;
+			process.platform === "win32"
+				? installPath.toLowerCase()
+				: installPath;
 		if (normalizedPath.startsWith(compareInstallPath)) {
 			const resolvedPath = join(installPath, `${appName}.app_name`);
 			if (env[ENV_DEBUG]) {
