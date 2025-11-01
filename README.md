@@ -5,7 +5,7 @@
   </picture> <br>
   <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <h3>Open Discord RPC server for custom clients</h3>
-  <h5>TypeScript + Bun • v1.1.9</h5>
+  <h5>TypeScript + Bun</h5>
 </div>
 
 ## About

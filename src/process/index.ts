@@ -13,9 +13,9 @@ import * as Natives from "./native/index";
 
 const log = createLogger("process", ...PROCESS_COLOR);
 
-const DetectableDB = (await file(
-	getDetectableDbPath(),
-).json()) as DetectableApp[];
+let DetectableDB: DetectableApp[] = [];
+const executableIndex: Map<string, DetectableApp[]> = new Map();
+let dbLoaded = false;
 
 function mergeCustomEntries(
 	customEntries: Partial<DetectableApp>[],
@@ -30,10 +30,10 @@ function mergeCustomEntries(
 
 		if (existingEntry) {
 			if (customEntry.executables) {
-				existingEntry.executables = [
-					...(existingEntry.executables || []),
-					...customEntry.executables,
-				];
+				if (!existingEntry.executables) {
+					existingEntry.executables = [];
+				}
+				existingEntry.executables.push(...customEntry.executables);
 			}
 			if (customEntry.name) existingEntry.name = customEntry.name;
 			if (customEntry.aliases)
@@ -59,22 +59,84 @@ function mergeCustomEntries(
 	log(`loaded ${source} with`, customEntries.length, "entries");
 }
 
-// Load detectable_fixes.json if it exists
-// This file contains patches and additions to Discord's detectable database
-try {
-	const customFile = file(getCustomDbPath());
-	if (await customFile.exists()) {
-		const customEntries =
-			(await customFile.json()) as Partial<DetectableApp>[];
-		mergeCustomEntries(customEntries, "detectable_fixes.json");
+function buildExecutableIndex(): void {
+	executableIndex.clear();
+
+	for (const app of DetectableDB) {
+		if (!app.executables) continue;
+
+		for (const exe of app.executables) {
+			const exeName = exe.name.toLowerCase();
+			const key = exeName.startsWith(EXECUTABLE_EXACT_MATCH_PREFIX)
+				? exeName.substring(1)
+				: exeName;
+
+			if (!executableIndex.has(key)) {
+				executableIndex.set(key, []);
+			}
+			executableIndex.get(key)?.push(app);
+		}
+
+		if (process.platform === "darwin") {
+			const appKey = app.name.toLowerCase();
+			if (!executableIndex.has(appKey)) {
+				executableIndex.set(appKey, []);
+			}
+			executableIndex.get(appKey)?.push(app);
+		}
 	}
-} catch {
-	// ignore errors if detectable_fixes.json doesn't exist or is invalid
+
+	log("built executable index with", executableIndex.size, "keys");
 }
+
+async function loadDatabase(): Promise<void> {
+	try {
+		const dbFile = file(getDetectableDbPath());
+		DetectableDB = (await dbFile.json()) as DetectableApp[];
+
+		try {
+			const customFile = file(getCustomDbPath());
+			if (await customFile.exists()) {
+				const customEntries =
+					(await customFile.json()) as Partial<DetectableApp>[];
+				mergeCustomEntries(customEntries, "detectable_fixes.json");
+			}
+		} catch {
+			// ignore errors
+		}
+
+		buildExecutableIndex();
+		dbLoaded = true;
+		log("database loaded with", DetectableDB.length, "entries");
+	} catch (error) {
+		log("failed to load database:", error);
+	}
+}
+
+loadDatabase();
 
 const NativeImpl = (Natives as Record<string, Native>)[process.platform] as
 	| Native
 	| undefined;
+
+function argsContainString(args: string[], target: string): boolean {
+	const targetLower = target.toLowerCase();
+
+	for (let i = 0; i < args.length; i++) {
+		const argLower = args[i]?.toLowerCase() || "";
+		if (argLower.includes(targetLower)) return true;
+	}
+
+	for (let i = 0; i < args.length - 1; i++) {
+		let combined = args[i]?.toLowerCase() || "";
+		for (let j = i + 1; j < args.length && j < i + 5; j++) {
+			combined += ` ${args[j]?.toLowerCase() || ""}`;
+			if (combined.includes(targetLower)) return true;
+		}
+	}
+
+	return false;
+}
 
 function matchesExecutable(
 	executable: {
@@ -114,7 +176,7 @@ function matchesExecutable(
 	if (!nameMatches) return false;
 
 	if (args && executable.arguments) {
-		const argsMatch = args.join(" ").indexOf(executable.arguments) > -1;
+		const argsMatch = argsContainString(args, executable.arguments);
 		if (strictArgs) {
 			return argsMatch; // must match exactly
 		}
@@ -133,6 +195,10 @@ export default class ProcessServer {
 	private timestamps: Record<string, number> = {};
 	private names: Record<string, string> = {};
 	private pids: Record<string, number> = {};
+	private pathCache: Map<
+		number,
+		{ path: string; normalized: string; variations: string[] }
+	> = new Map();
 
 	constructor(handlers: Handlers) {
 		if (!NativeImpl) return;
@@ -146,28 +212,85 @@ export default class ProcessServer {
 		log("started");
 	}
 
-	async scan(): Promise<void> {
-		if (!NativeImpl) return;
+	private generatePathVariations(normalizedPath: string): string[] {
+		const toCompare: string[] = [];
+		const splitPath = normalizedPath.split("/");
 
-		const processes = await NativeImpl.getProcesses();
-		const ids: string[] = [];
+		for (let i = 1; i < splitPath.length; i++) {
+			toCompare.push(splitPath.slice(-i).join("/"));
+		}
 
-		for (const [pid, _path, args] of processes) {
-			const path = _path.toLowerCase().replaceAll("\\", "/");
-			const toCompare: string[] = [];
-			const splitPath = path.split("/");
-
-			for (let i = 1; i < splitPath.length; i++) {
-				toCompare.push(splitPath.slice(-i).join("/"));
-			}
-
-			for (const p of toCompare.slice()) {
-				for (const suffix of EXECUTABLE_ARCH_SUFFIXES) {
+		const baseLength = toCompare.length;
+		for (let i = 0; i < baseLength; i++) {
+			const p = toCompare[i];
+			if (!p) continue;
+			for (const suffix of EXECUTABLE_ARCH_SUFFIXES) {
+				if (p.includes(suffix)) {
 					toCompare.push(p.replace(suffix, ""));
 				}
 			}
+		}
 
-			for (const { executables, id, name } of DetectableDB) {
+		return toCompare;
+	}
+
+	private getCandidateApps(pathVariations: string[]): DetectableApp[] {
+		const candidateSet = new Set<DetectableApp>();
+
+		for (const pathVar of pathVariations) {
+			const apps = executableIndex.get(pathVar);
+			if (apps) {
+				for (const app of apps) {
+					candidateSet.add(app);
+				}
+			}
+
+			const lastSlash = pathVar.lastIndexOf("/");
+			const filename =
+				lastSlash >= 0 ? pathVar.substring(lastSlash + 1) : pathVar;
+			const dotIndex = filename.lastIndexOf(".");
+			if (dotIndex > 0) {
+				const withoutExt = filename.substring(0, dotIndex);
+				const appsNoExt = executableIndex.get(withoutExt);
+				if (appsNoExt) {
+					for (const app of appsNoExt) {
+						candidateSet.add(app);
+					}
+				}
+			}
+		}
+
+		return Array.from(candidateSet);
+	}
+
+	async scan(): Promise<void> {
+		if (!NativeImpl || !dbLoaded) return;
+
+		const processes = await NativeImpl.getProcesses();
+		const ids: string[] = [];
+		const activePids = new Set<number>();
+
+		for (const [pid, _path, args] of processes) {
+			activePids.add(pid);
+
+			let cached = this.pathCache.get(pid);
+			const normalizedPath = _path.toLowerCase().replaceAll("\\", "/");
+
+			if (!cached || cached.path !== _path) {
+				const variations = this.generatePathVariations(normalizedPath);
+				cached = {
+					path: _path,
+					normalized: normalizedPath,
+					variations,
+				};
+				this.pathCache.set(pid, cached);
+			}
+
+			const toCompare = cached.variations;
+
+			const candidateApps = this.getCandidateApps(toCompare);
+
+			for (const { executables, id, name } of candidateApps) {
 				// prioritize exact matches (with strict argument checking)
 				// try non-launcher executables with strict args first
 				let matched =
@@ -268,7 +391,15 @@ export default class ProcessServer {
 						pid,
 						name,
 					);
+
+					break;
 				}
+			}
+		}
+
+		for (const cachedPid of this.pathCache.keys()) {
+			if (!activePids.has(cachedPid)) {
+				this.pathCache.delete(cachedPid);
 			}
 		}
 
