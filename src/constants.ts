@@ -1,9 +1,7 @@
 import { join } from "node:path";
 
-import detectableDbRaw from "../detectable.json" with { type: "file" };
-import detectableFixesDbRaw from "../detectable_fixes.json" with {
-	type: "file",
-};
+import detectableDbRaw from "../detectable.json";
+import detectableFixesDbRaw from "../detectable_fixes.json";
 
 export async function getDetectableDb() {
 	const dataDir = process.env[ENV_DATA_DIR];
