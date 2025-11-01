@@ -50,30 +50,62 @@ const ntdll = dlopen(`ntdll.${suffix}`, {
 	},
 });
 
+const pathBuffer = new Uint8Array(MAX_PATH * 2);
+const sizeBuffer = new Uint32Array([MAX_PATH]);
+const cmdLineInfoBuffer = new Uint8Array(8192);
+const returnLength = new Uint32Array(1);
+
+const utf16Decoder = new TextDecoder("utf-16le");
+
+const failedOpens = new Set<number>();
+
+const SYSTEM_EXECUTABLES = new Set([
+	"system",
+	"registry",
+	"smss.exe",
+	"csrss.exe",
+	"wininit.exe",
+	"services.exe",
+	"lsass.exe",
+	"svchost.exe",
+	"dwm.exe",
+	"conhost.exe",
+	"taskhost.exe",
+	"winlogon.exe",
+	"fontdrvhost.exe",
+	"sihost.exe",
+	"ctfmon.exe",
+	"taskhostw.exe",
+	"runtimebroker.exe",
+	"searchindexer.exe",
+	"searchprotocolhost.exe",
+]);
+
 function readWideString(
 	buffer: Uint8Array,
 	offset = 0,
 	maxLength = MAX_PATH,
 ): string {
-	const chars: number[] = [];
-	for (
-		let i = offset;
-		i < buffer.length - 1 && chars.length < maxLength;
-		i += 2
-	) {
-		const charCode = (buffer[i] ?? 0) | ((buffer[i + 1] ?? 0) << 8);
-		if (charCode === 0) break;
-		chars.push(charCode);
+	let end = offset;
+	const maxEnd = Math.min(buffer.length - 1, offset + maxLength * 2);
+	while (end < maxEnd) {
+		if (buffer[end] === 0 && buffer[end + 1] === 0) break;
+		end += 2;
 	}
-	return String.fromCharCode(...chars);
+
+	if (end > offset) {
+		const slice = buffer.slice(offset, end);
+		return utf16Decoder.decode(slice);
+	}
+	return "";
 }
 
 function readDWORD(buffer: Uint8Array, offset: number): number {
 	return (
-		(buffer[offset] ?? 0) |
-		((buffer[offset + 1] ?? 0) << 8) |
-		((buffer[offset + 2] ?? 0) << 16) |
-		((buffer[offset + 3] ?? 0) << 24)
+		(buffer[offset] || 0) |
+		((buffer[offset + 1] || 0) << 8) |
+		((buffer[offset + 2] || 0) << 16) |
+		((buffer[offset + 3] || 0) << 24)
 	);
 }
 
@@ -86,8 +118,7 @@ function writeDWORD(buffer: Uint8Array, offset: number, value: number): void {
 
 function getProcessPath(hProcess: Pointer): string | null {
 	try {
-		const pathBuffer = new Uint8Array(MAX_PATH * 2);
-		const sizeBuffer = new Uint32Array([MAX_PATH]);
+		sizeBuffer[0] = MAX_PATH;
 
 		const result = kernel32.symbols.QueryFullProcessImageNameW(
 			hProcess,
@@ -99,34 +130,13 @@ function getProcessPath(hProcess: Pointer): string | null {
 		if (result) {
 			return readWideString(pathBuffer);
 		}
-	} catch {
-		// Silently fail for inaccessible processes
-	}
+	} catch {}
 	return null;
 }
 
 function getProcessCommandLine(hProcess: Pointer): string[] {
 	try {
-		const pbiBuffer = new Uint8Array(48);
-		const returnLength = new Uint32Array(1);
-
-		let status = ntdll.symbols.NtQueryInformationProcess(
-			hProcess,
-			0,
-			pbiBuffer as unknown as Pointer,
-			pbiBuffer.length,
-			returnLength as unknown as Pointer,
-		);
-
-		if (status !== 0) return [];
-
-		const pebAddress = Number(
-			new BigUint64Array(pbiBuffer.buffer.slice(8, 16))[0],
-		);
-		if (pebAddress === 0) return [];
-
-		const cmdLineInfoBuffer = new Uint8Array(8192);
-		status = ntdll.symbols.NtQueryInformationProcess(
+		const status = ntdll.symbols.NtQueryInformationProcess(
 			hProcess,
 			ProcessCommandLineInformation,
 			cmdLineInfoBuffer as unknown as Pointer,
@@ -147,20 +157,18 @@ function getProcessCommandLine(hProcess: Pointer): string[] {
 				}
 			}
 		}
-	} catch {
-		// Silently fail for inaccessible processes
-	}
+	} catch {}
 	return [];
 }
 
 function parseCommandLine(cmdLine: string): string[] {
 	const args: string[] = [];
-	let current = "";
+	const currentChars: string[] = [];
 	let inQuotes = false;
 	let i = 0;
 
 	while (i < cmdLine.length) {
-		const char = cmdLine[i];
+		const char = cmdLine[i] || "";
 
 		if (char === '"') {
 			inQuotes = !inQuotes;
@@ -169,9 +177,9 @@ function parseCommandLine(cmdLine: string): string[] {
 		}
 
 		if (char === " " && !inQuotes) {
-			if (current) {
-				args.push(current);
-				current = "";
+			if (currentChars.length > 0) {
+				args.push(currentChars.join(""));
+				currentChars.length = 0;
 			}
 			i++;
 			continue;
@@ -185,105 +193,145 @@ function parseCommandLine(cmdLine: string): string[] {
 			}
 
 			if (i < cmdLine.length && cmdLine[i] === '"') {
-				current += "\\".repeat(Math.floor(numBackslashes / 2));
+				const halfBackslashes = Math.floor(numBackslashes / 2);
+				for (let j = 0; j < halfBackslashes; j++) {
+					currentChars.push("\\");
+				}
 				if (numBackslashes % 2 === 0) {
 					inQuotes = !inQuotes;
 					i++;
 				} else {
-					current += '"';
+					currentChars.push('"');
 					i++;
 				}
 			} else {
-				current += "\\".repeat(numBackslashes);
+				for (let j = 0; j < numBackslashes; j++) {
+					currentChars.push("\\");
+				}
 			}
 			continue;
 		}
 
-		current += char;
+		currentChars.push(char);
 		i++;
 	}
 
-	if (current) {
-		args.push(current);
+	if (currentChars.length > 0) {
+		args.push(currentChars.join(""));
 	}
 
 	return args;
 }
 
-export function getProcesses(): Promise<ProcessInfo[]> {
-	return new Promise((resolve) => {
-		const processes: ProcessInfo[] = [];
+export async function getProcesses(): Promise<ProcessInfo[]> {
+	const processes: ProcessInfo[] = [];
+
+	try {
+		const hSnapshot = kernel32.symbols.CreateToolhelp32Snapshot(
+			TH32CS_SNAPPROCESS,
+			0,
+		);
+
+		if (!hSnapshot || hSnapshot === -1) {
+			log(
+				"failed to create process snapshot:",
+				kernel32.symbols.GetLastError(),
+			);
+			return [];
+		}
 
 		try {
-			const hSnapshot = kernel32.symbols.CreateToolhelp32Snapshot(
-				TH32CS_SNAPPROCESS,
-				0,
+			const pe32 = new Uint8Array(PROCESSENTRY32W_SIZE);
+			writeDWORD(pe32, 0, PROCESSENTRY32W_SIZE);
+
+			let hasProcess = kernel32.symbols.Process32FirstW(
+				hSnapshot,
+				pe32 as unknown as Pointer,
 			);
 
-			if (!hSnapshot || hSnapshot === -1) {
-				log(
-					"failed to create process snapshot:",
-					kernel32.symbols.GetLastError(),
-				);
-				resolve([]);
-				return;
+			let processCount = 0;
+			const YIELD_INTERVAL = 20;
+
+			if (failedOpens.size > 1000) {
+				failedOpens.clear();
 			}
 
-			try {
-				const pe32 = new Uint8Array(PROCESSENTRY32W_SIZE);
-				writeDWORD(pe32, 0, PROCESSENTRY32W_SIZE);
+			while (hasProcess) {
+				const pid = readDWORD(pe32, 8);
+				const exeFile = readWideString(pe32, 44, 260);
 
-				let hasProcess = kernel32.symbols.Process32FirstW(
+				if (pid > 0 && exeFile) {
+					if (pid <= 1000) {
+						hasProcess = kernel32.symbols.Process32NextW(
+							hSnapshot,
+							pe32 as unknown as Pointer,
+						);
+						continue;
+					}
+
+					const exeFileLower = exeFile.toLowerCase();
+					if (SYSTEM_EXECUTABLES.has(exeFileLower)) {
+						hasProcess = kernel32.symbols.Process32NextW(
+							hSnapshot,
+							pe32 as unknown as Pointer,
+						);
+						continue;
+					}
+
+					if (failedOpens.has(pid)) {
+						hasProcess = kernel32.symbols.Process32NextW(
+							hSnapshot,
+							pe32 as unknown as Pointer,
+						);
+						continue;
+					}
+
+					const hProcess = kernel32.symbols.OpenProcess(
+						PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ,
+						false,
+						pid,
+					);
+
+					let fullPath = "";
+					let args: string[] = [];
+
+					if (hProcess && hProcess !== 0) {
+						try {
+							const path = getProcessPath(hProcess);
+							if (path) {
+								fullPath = path;
+							}
+
+							args = getProcessCommandLine(hProcess);
+						} finally {
+							kernel32.symbols.CloseHandle(hProcess);
+						}
+					} else {
+						failedOpens.add(pid);
+					}
+
+					if (!fullPath) {
+						fullPath = exeFile;
+					}
+
+					processes.push([pid, fullPath, args]);
+
+					if (++processCount % YIELD_INTERVAL === 0) {
+						await new Promise((r) => setImmediate(r));
+					}
+				}
+
+				hasProcess = kernel32.symbols.Process32NextW(
 					hSnapshot,
 					pe32 as unknown as Pointer,
 				);
-
-				while (hasProcess) {
-					const pid = readDWORD(pe32, 8);
-					const exeFile = readWideString(pe32, 44, 260);
-
-					if (pid > 0 && exeFile) {
-						const hProcess = kernel32.symbols.OpenProcess(
-							PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ,
-							false,
-							pid,
-						);
-
-						let fullPath = "";
-						let args: string[] = [];
-
-						if (hProcess && hProcess !== 0) {
-							try {
-								const path = getProcessPath(hProcess);
-								if (path) {
-									fullPath = path;
-								}
-
-								args = getProcessCommandLine(hProcess);
-							} finally {
-								kernel32.symbols.CloseHandle(hProcess);
-							}
-						}
-
-						if (!fullPath) {
-							fullPath = exeFile;
-						}
-
-						processes.push([pid, fullPath, args]);
-					}
-
-					hasProcess = kernel32.symbols.Process32NextW(
-						hSnapshot,
-						pe32 as unknown as Pointer,
-					);
-				}
-			} finally {
-				kernel32.symbols.CloseHandle(hSnapshot);
 			}
-		} catch (error) {
-			log("error enumerating processes:", error);
+		} finally {
+			kernel32.symbols.CloseHandle(hSnapshot);
 		}
+	} catch (error) {
+		log("error enumerating processes:", error);
+	}
 
-		resolve(processes);
-	});
+	return processes;
 }
