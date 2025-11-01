@@ -44,7 +44,7 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 			if (appPath.endsWith(".exe.app")) {
 				appPath = appPath.replace(".app", "");
 			} else {
-				appPath += "_parallels";
+				appPath += "_name";
 			}
 		}
 

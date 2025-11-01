@@ -131,6 +131,7 @@ function argsContainString(args: string[], target: string): boolean {
 	return false;
 }
 
+const appNameRegex = /.app_name$/;
 function matchesExecutable(
 	executable: {
 		name: string;
@@ -141,7 +142,7 @@ function matchesExecutable(
 	toCompare: string[],
 	args: string[] | null,
 	checkLauncher: boolean,
-	checkParallels: boolean,
+	checkAppName: boolean,
 	strictArgs: boolean,
 ): boolean {
 	if (executable.is_launcher !== checkLauncher) return false;
@@ -151,10 +152,10 @@ function matchesExecutable(
 
 	if (!firstChar || !firstCompare) return false;
 
-	if (checkParallels) {
-		if (firstCompare.endsWith(".app_parallels")) {
-			const parallelName = firstCompare.replace(".app_parallels", "");
-			return executable.name.toLowerCase() === parallelName;
+	if (checkAppName) {
+		if (appNameRegex.test(firstCompare)) {
+			const appName = firstCompare.replace(appNameRegex, "");
+			return executable.name.toLowerCase() === appName;
 		}
 	}
 
@@ -280,6 +281,16 @@ export default class ProcessServer {
 
 			for (const { executables, id, name } of candidateApps) {
 				let matched =
+					matchesExecutable(
+						{ name, is_launcher: false },
+						toCompare,
+						args,
+						false,
+						true,
+						false,
+					) ?? false;
+
+				if (!matched) {
 					executables?.some((x) =>
 						matchesExecutable(
 							x,
@@ -290,6 +301,7 @@ export default class ProcessServer {
 							true,
 						),
 					) ?? false;
+				}
 
 				if (!matched) {
 					matched =
@@ -330,18 +342,6 @@ export default class ProcessServer {
 								false,
 								false,
 							),
-						) ?? false;
-				}
-
-				if (!matched && process.platform === "darwin") {
-					matched =
-						matchesExecutable(
-							{ name, is_launcher: false },
-							toCompare,
-							args,
-							false,
-							true,
-							false,
 						) ?? false;
 				}
 
