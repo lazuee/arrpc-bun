@@ -15,10 +15,12 @@ interface SteamLibrary {
 const defaultSteamPaths =
 	process.platform === "darwin"
 		? [resolve(homedir(), "Library", "Application Support", "Steam")]
-		: [
-				resolve(homedir(), ".steam", "steam"),
-				resolve(homedir(), ".local", "share", "Steam"),
-			];
+		: process.platform === "win32"
+			? [resolve(env?.["ProgramFiles(x86)"]!, "Steam")]
+			: [
+					resolve(homedir(), ".steam", "steam"),
+					resolve(homedir(), ".local", "share", "Steam"),
+				];
 
 function extractNestedBlock(content: string, startPos: number): string | null {
 	let depth = 0;
