@@ -185,6 +185,10 @@ export async function resolveSteamApp(
 		normalizedPath = processPath.substring(2).replace(/\\/g, "/");
 	}
 
+	if (process.platform === "win32") {
+		normalizedPath = normalizedPath.replace(/\//g, "\\").toLowerCase();
+	}
+
 	const isRuntimeProcess = STEAM_RUNTIME_PATHS.some((runtimePath) =>
 		normalizedPath.includes(runtimePath),
 	);
@@ -199,7 +203,9 @@ export async function resolveSteamApp(
 	}
 
 	for (const [installPath, appName] of steamAppLookup) {
-		if (normalizedPath.startsWith(installPath)) {
+		const compareInstallPath =
+			process.platform === "win32" ? installPath.toLowerCase() : installPath;
+		if (normalizedPath.startsWith(compareInstallPath)) {
 			const resolvedPath = join(installPath, `${appName}.app_name`);
 			if (env[ENV_DEBUG]) {
 				if (isWinePath) {
