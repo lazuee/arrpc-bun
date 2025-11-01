@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/19228318/202900211-95e8474b-edbb-4048-ba0b-a581a6d57fc4.png" width=300>
-    <img alt="arRPC" src="https://user-images.githubusercontent.com/19228318/203024061-064fc015-9096-40c3-9786-ad23d90414a6.png" width=300>
+    <img alt="arRPC" src="https://raw.githubusercontent.com/Creationsss/arrpc-bun/refs/heads/main/assets/logo.png" width=300>
   </picture> <br>
   <a href="https://choosealicense.com/licenses/mit/"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <a href="https://github.com/Creationsss/arrpc-bun/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/Creationsss/arrpc-bun"></a>
