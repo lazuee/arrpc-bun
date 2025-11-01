@@ -26,9 +26,9 @@ Download the latest release for your platform from [GitHub Releases](https://git
 - macOS (Intel, Apple Silicon)
 - Windows (x64)
 
-### npm
+### bun
 ```bash
-npm install -g arrpc-bun
+bun install -g arrpc-bun
 ```
 
 ## Quick Start
