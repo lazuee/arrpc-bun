@@ -83,6 +83,14 @@ export const ANTI_CHEAT_EXECUTABLES = [
 	"anticheattoolkit",
 ];
 
+export const STEAM_RUNTIME_PATHS = [
+	"SteamLinuxRuntime",
+	"Proton",
+	"pressure-vessel",
+	"steam-runtime",
+	"compatibilitytools.d",
+];
+
 export const SYSTEM_EXECUTABLES = new Set([
 	"system",
 	"registry",
@@ -111,6 +119,7 @@ export const BRIDGE_COLOR: [number, number, number] = [87, 242, 135];
 export const IPC_COLOR: [number, number, number] = [254, 231, 92];
 export const WEBSOCKET_COLOR: [number, number, number] = [235, 69, 158];
 export const PROCESS_COLOR: [number, number, number] = [237, 66, 69];
+export const STEAM_COLOR: [number, number, number] = [150, 100, 200];
 
 export enum IPCMessageType {
 	HANDSHAKE = 0,

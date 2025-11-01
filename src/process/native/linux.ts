@@ -6,6 +6,7 @@ import {
 	LINUX_PROC_DIR,
 } from "../../constants";
 import type { ProcessInfo } from "../../types";
+import { resolveSteamApp } from "../steam";
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
 	const procDir = await Array.fromAsync(
@@ -52,7 +53,10 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 				);
 
 				if (!isAntiCheat) {
-					processes.push([pidNum, exePath, parts.slice(1)]);
+					const steamPath = await resolveSteamApp(exePath);
+					const finalPath = steamPath ?? exePath;
+
+					processes.push([pidNum, finalPath, parts.slice(1)]);
 				}
 			}
 		} catch {}

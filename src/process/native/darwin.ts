@@ -1,42 +1,12 @@
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { Glob, spawn } from "bun";
+import { resolve } from "node:path";
+import { spawn } from "bun";
 import type { ProcessInfo } from "../../types";
+import { resolveSteamApp } from "../steam";
 
 const winExePathRegex =
 	/((?:(?:[a-zA-Z]:|\\\\[\w\s.]+\\[\w\s.$]+)\\(?:[\w\s.]+\\)*)(?:[\w\s.]*?)\.exe)/;
 const parallelsDir = resolve(homedir(), "Applications (Parallels)");
-const steamDir = resolve(
-	homedir(),
-	"Library/Application Support/Steam/steamapps",
-);
-
-const steamApps: {
-	appid: string;
-	name: string;
-	installdir: string;
-}[] = [];
-
-async function initSteamApps() {
-	for await (const file of new Glob("appmanifest_*.acf").scan({
-		cwd: steamDir,
-	})) {
-		const text = await Bun.file(join(steamDir, file)).text();
-		const appid = text.match(/"appid"\s+"(\d+)"/)?.[1];
-		const name = text.match(/"name"\s+"([^"]+)"/)?.[1];
-		const installdir = text.match(/"installdir"\s+"([^"]+)"/)?.[1];
-
-		if (appid && name && installdir) {
-			steamApps.push({
-				appid,
-				name,
-				installdir,
-			});
-		}
-	}
-}
-
-await initSteamApps();
 
 function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 	const appIndex = cmdline.toLowerCase().indexOf(".app");
@@ -76,20 +46,6 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 				appPath = appPath.replace(".app", "");
 			} else {
 				appPath += "_name";
-			}
-		}
-
-		if (appPath.startsWith(steamDir)) {
-			const steamApp = steamApps.find((app) =>
-				appPath.startsWith(join(steamDir, "common", app.installdir)),
-			);
-			if (steamApp) {
-				appPath = join(
-					steamDir,
-					"common",
-					steamApp.installdir,
-					`${steamApp.name}.app_name`,
-				);
 			}
 		}
 
@@ -154,7 +110,10 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 
 			if (!exe) continue;
 
-			processes.push([pidNum, exe, args]);
+			const steamPath = await resolveSteamApp(exe);
+			const finalPath = steamPath ?? exe;
+
+			processes.push([pidNum, finalPath, args]);
 		}
 
 		return processes;

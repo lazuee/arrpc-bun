@@ -1,4 +1,6 @@
+import { env } from "bun";
 import {
+	ENV_DEBUG,
 	EXECUTABLE_ARCH_SUFFIXES,
 	EXECUTABLE_EXACT_MATCH_PREFIX,
 	getCustomDb,
@@ -154,8 +156,17 @@ function matchesExecutable(
 
 	if (checkAppName) {
 		if (appNameRegex.test(firstCompare)) {
-			const appName = firstCompare.replace(appNameRegex, "");
-			return executable.name.toLowerCase() === appName;
+			const appName = firstCompare
+				.replace(appNameRegex, "")
+				.toLowerCase();
+			const executableNameLower = executable.name.toLowerCase();
+			const matches = executableNameLower === appName;
+			if (matches && env[ENV_DEBUG]) {
+				log(
+					`matched via .app_name: "${executable.name}" === "${appName}"`,
+				);
+			}
+			return matches;
 		}
 	}
 
@@ -169,11 +180,24 @@ function matchesExecutable(
 	if (args && executable.arguments) {
 		const argsMatch = argsContainString(args, executable.arguments);
 		if (strictArgs) {
+			if (argsMatch && env[ENV_DEBUG]) {
+				log(
+					`matched via name + strict args: "${executable.name}" with args "${executable.arguments}"`,
+				);
+			}
 			return argsMatch;
 		}
 		if (firstChar === EXECUTABLE_EXACT_MATCH_PREFIX && !argsMatch) {
 			return false;
 		}
+	}
+
+	if (env[ENV_DEBUG]) {
+		const matchType =
+			firstChar === EXECUTABLE_EXACT_MATCH_PREFIX ? "exact" : "partial";
+		log(
+			`matched via ${matchType} name: "${executable.name}" in [${toCompare.slice(0, 3).join(", ")}...]`,
+		);
 	}
 
 	return true;
@@ -224,6 +248,13 @@ export default class ProcessServer {
 	}
 
 	private getCandidateApps(pathVariations: string[]): DetectableApp[] {
+		const hasAppName = pathVariations.some((path) =>
+			path.includes(".app_name"),
+		);
+		if (hasAppName) {
+			return DetectableDB;
+		}
+
 		const candidateSet = new Set<DetectableApp>();
 
 		for (const pathVar of pathVariations) {
@@ -291,16 +322,17 @@ export default class ProcessServer {
 					) ?? false;
 
 				if (!matched) {
-					executables?.some((x) =>
-						matchesExecutable(
-							x,
-							toCompare,
-							args,
-							false,
-							false,
-							true,
-						),
-					) ?? false;
+					matched =
+						executables?.some((x) =>
+							matchesExecutable(
+								x,
+								toCompare,
+								args,
+								false,
+								false,
+								true,
+							),
+						) ?? false;
 				}
 
 				if (!matched) {
@@ -352,6 +384,11 @@ export default class ProcessServer {
 					ids.push(id);
 					if (!this.timestamps[id]) {
 						log("detected game!", name);
+						if (env[ENV_DEBUG]) {
+							log(`  game id: ${id}`);
+							log(`  process pid: ${pid}`);
+							log(`  process path: ${_path}`);
+						}
 						this.timestamps[id] = Date.now();
 					}
 
