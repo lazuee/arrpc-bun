@@ -1,5 +1,28 @@
 import { join } from "node:path";
 
+import detectableDbRaw from "../detectable.json" with { type: "file" };
+import detectableFixesDbRaw from "../detectable_fixes.json" with {
+	type: "file",
+};
+
+export async function getDetectableDb() {
+	const dataDir = process.env[ENV_DATA_DIR];
+	if (dataDir) {
+		const customPath = join(dataDir, "detectable.json");
+		return await Bun.file(customPath).json();
+	}
+	return detectableDbRaw;
+}
+
+export async function getCustomDb() {
+	const dataDir = process.env[ENV_DATA_DIR];
+	if (dataDir) {
+		const customPath = join(dataDir, "detectable_fixes.json");
+		return await Bun.file(customPath).json();
+	}
+	return detectableFixesDbRaw;
+}
+
 export const ENV_DEBUG = "ARRPC_DEBUG";
 export const ENV_NO_PROCESS_SCANNING = "ARRPC_NO_PROCESS_SCANNING";
 export const ENV_BRIDGE_PORT = "ARRPC_BRIDGE_PORT";
@@ -47,6 +70,7 @@ export const EXECUTABLE_ARCH_SUFFIXES = ["64", ".x64", "x64", "_64"] as const;
 export const EXECUTABLE_EXACT_MATCH_PREFIX = ">";
 export const LINUX_PROC_DIR = "/proc";
 export const CMDLINE_NULL_SEPARATOR = "\0";
+export const VALID_PLATFORMS = ["win32", "linux", "darwin"];
 
 export const ANTI_CHEAT_EXECUTABLES = [
 	"easyanticheat",
@@ -89,21 +113,6 @@ export const BRIDGE_COLOR: [number, number, number] = [87, 242, 135];
 export const IPC_COLOR: [number, number, number] = [254, 231, 92];
 export const WEBSOCKET_COLOR: [number, number, number] = [235, 69, 158];
 export const PROCESS_COLOR: [number, number, number] = [237, 66, 69];
-export function getDetectableDbPath(): string {
-	const dataDir = process.env[ENV_DATA_DIR];
-	if (dataDir) {
-		return join(dataDir, "detectable.json");
-	}
-	return join(import.meta.dirname, "..", "detectable.json");
-}
-
-export function getCustomDbPath(): string {
-	const dataDir = process.env[ENV_DATA_DIR];
-	if (dataDir) {
-		return join(dataDir, "detectable_fixes.json");
-	}
-	return join(import.meta.dirname, "..", "detectable_fixes.json");
-}
 
 export enum IPCMessageType {
 	HANDSHAKE = 0,

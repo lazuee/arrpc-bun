@@ -1,14 +1,15 @@
-import { file, write } from "bun";
-import { getCustomDbPath, getDetectableDbPath } from "../src/constants";
+import { write } from "bun";
 import type { DetectableApp } from "../src/types";
 
 console.log("Fetching detectable.json from Discord API...");
-const detectablePath = getDetectableDbPath();
 
-const currentDetectable = file(detectablePath);
-const current: DetectableApp[] = (await currentDetectable.exists())
-	? await currentDetectable.json()
-	: [];
+let current: DetectableApp[] = [];
+try {
+	const detectableDbRaw = await import("../detectable.json");
+	current = detectableDbRaw.default as DetectableApp[];
+} catch {
+	console.log("No existing detectable.json found, starting fresh");
+}
 
 const response = await fetch(
 	"https://discord.com/api/v9/applications/detectable",
@@ -20,8 +21,10 @@ if (!response.ok) {
 }
 
 const updated = (await response.json()) as DetectableApp[];
-
-await write(detectablePath, JSON.stringify(updated, null, 2));
+await write(
+	new URL("../detectable.json", import.meta.url),
+	JSON.stringify(updated, null, 2),
+);
 
 console.log("Updated detectable.json");
 console.log(
@@ -40,15 +43,17 @@ if (newGames.length > 0) {
 }
 
 console.log("\nFetching detectable_fixes.json from upstream...");
-const fixesPath = getCustomDbPath();
 
-const currentFixes = file(fixesPath);
-const currentFixesData: Partial<DetectableApp>[] = (await currentFixes.exists())
-	? await currentFixes.json()
-	: [];
+let currentFixesData: Partial<DetectableApp>[] = [];
+try {
+	const detectableFixesDbRaw = await import("../detectable_fixes.json");
+	currentFixesData = detectableFixesDbRaw.default as Partial<DetectableApp>[];
+} catch {
+	console.log("No existing detectable_fixes.json found, starting fresh");
+}
 
 const fixesResponse = await fetch(
-	"https://heliopolis.live/creations/arrpc-bun/-/snippets/6/raw/main/detectable_fixes.json",
+	"https://raw.githubusercontent.com/Creationsss/arrpc-bun/refs/heads/main/detectable_fixes.json",
 );
 
 if (!fixesResponse.ok) {
@@ -59,9 +64,10 @@ if (!fixesResponse.ok) {
 } else {
 	const updatedFixes =
 		(await fixesResponse.json()) as Partial<DetectableApp>[];
-
-	await write(fixesPath, JSON.stringify(updatedFixes, null, "\t"));
-
+	await write(
+		new URL("../detectable_fixes.json", import.meta.url),
+		JSON.stringify(updatedFixes, null, "\t"),
+	);
 	console.log("Updated detectable_fixes.json");
 	console.log(
 		`  ${currentFixesData.length} -> ${updatedFixes.length} entries (+${updatedFixes.length - currentFixesData.length})`,

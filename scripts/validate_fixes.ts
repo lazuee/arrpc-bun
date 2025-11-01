@@ -1,8 +1,9 @@
-import { file } from "bun";
-import { getCustomDbPath, getDetectableDbPath } from "../src/constants";
+import {
+	getCustomDb,
+	getDetectableDb,
+	VALID_PLATFORMS,
+} from "../src/constants";
 import type { DetectableApp } from "../src/types";
-
-const VALID_PLATFORMS = ["win32", "linux", "darwin"];
 
 interface ValidationError {
 	path: string;
@@ -18,18 +19,12 @@ function addError(path: string, message: string): void {
 async function validateCustomJson(): Promise<boolean> {
 	console.log("Validating detectable_fixes.json...\n");
 
-	const customFile = file(getCustomDbPath());
-	if (!(await customFile.exists())) {
-		console.log("No detectable_fixes.json file found (this is okay)");
-		return true;
-	}
-
 	let customEntries: unknown;
 	try {
-		customEntries = await customFile.json();
-	} catch (error) {
-		addError("detectable_fixes.json", `Invalid JSON: ${error}`);
-		return false;
+		customEntries = await getCustomDb();
+	} catch {
+		console.log("No detectable_fixes.json file found (this is okay)");
+		return true;
 	}
 
 	if (!Array.isArray(customEntries)) {
@@ -37,9 +32,7 @@ async function validateCustomJson(): Promise<boolean> {
 		return false;
 	}
 
-	const detectableDB = (await file(
-		getDetectableDbPath(),
-	).json()) as DetectableApp[];
+	const detectableDB = (await getDetectableDb()) as DetectableApp[];
 	const detectableIds = new Set(detectableDB.map((entry) => entry.id));
 
 	for (let i = 0; i < customEntries.length; i++) {

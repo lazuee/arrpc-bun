@@ -1,9 +1,8 @@
-import { file } from "bun";
 import {
 	EXECUTABLE_ARCH_SUFFIXES,
 	EXECUTABLE_EXACT_MATCH_PREFIX,
-	getCustomDbPath,
-	getDetectableDbPath,
+	getCustomDb,
+	getDetectableDb,
 	PROCESS_COLOR,
 	PROCESS_SCAN_INTERVAL,
 } from "../constants";
@@ -91,16 +90,12 @@ function buildExecutableIndex(): void {
 
 async function loadDatabase(): Promise<void> {
 	try {
-		const dbFile = file(getDetectableDbPath());
-		DetectableDB = (await dbFile.json()) as DetectableApp[];
+		DetectableDB = (await getDetectableDb()) as DetectableApp[];
 
 		try {
-			const customFile = file(getCustomDbPath());
-			if (await customFile.exists()) {
-				const customEntries =
-					(await customFile.json()) as Partial<DetectableApp>[];
-				mergeCustomEntries(customEntries, "detectable_fixes.json");
-			}
+			const customEntries =
+				(await getCustomDb()) as Partial<DetectableApp>[];
+			mergeCustomEntries(customEntries, "detectable_fixes.json");
 		} catch {}
 
 		buildExecutableIndex();
