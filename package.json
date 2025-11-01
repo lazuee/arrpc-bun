@@ -30,14 +30,14 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://heliopolis.live/creations/arrpc-bun.git"
+		"url": "https://github.com/Creationsss/arrpc-bun.git"
 	},
 	"author": "OpenAsar (original), creations (TypeScript port)",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://heliopolis.live/creations/arrpc-bun/-/issues"
+		"url": "https://github.com/Creationsss/arrpc-bun/issues"
 	},
-	"homepage": "https://heliopolis.live/creations/arrpc-bun",
+	"homepage": "https://github.com/Creationsss/arrpc-bun",
 	"keywords": [
 		"discord",
 		"rpc",
