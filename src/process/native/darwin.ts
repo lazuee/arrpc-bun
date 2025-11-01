@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { spawn } from "bun";
 import type { ProcessInfo } from "../../types";
+import { resolveSteamApp } from "../steam";
 
 const winExePathRegex =
 	/((?:(?:[a-zA-Z]:|\\\\[\w\s.]+\\[\w\s.$]+)\\(?:[\w\s.]+\\)*)(?:[\w\s.]*?)\.exe)/;
@@ -44,7 +45,7 @@ function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 			if (appPath.endsWith(".exe.app")) {
 				appPath = appPath.replace(".app", "");
 			} else {
-				appPath += "_parallels";
+				appPath += "_name";
 			}
 		}
 
@@ -109,7 +110,10 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 
 			if (!exe) continue;
 
-			processes.push([pidNum, exe, args]);
+			const steamPath = await resolveSteamApp(exe);
+			const finalPath = steamPath ?? exe;
+
+			processes.push([pidNum, finalPath, args]);
 		}
 
 		return processes;
