@@ -108,8 +108,6 @@ async function loadDatabase(): Promise<void> {
 	}
 }
 
-loadDatabase();
-
 const NativeImpl = (Natives as Record<string, Native>)[process.platform] as
 	| Native
 	| undefined;
@@ -160,13 +158,7 @@ function matchesExecutable(
 				.replace(appNameRegex, "")
 				.toLowerCase();
 			const executableNameLower = executable.name.toLowerCase();
-			const matches = executableNameLower === appName;
-			if (matches && env[ENV_DEBUG]) {
-				log(
-					`matched via .app_name: "${executable.name}" === "${appName}"`,
-				);
-			}
-			return matches;
+			return executableNameLower === appName;
 		}
 	}
 
@@ -180,24 +172,11 @@ function matchesExecutable(
 	if (args && executable.arguments) {
 		const argsMatch = argsContainString(args, executable.arguments);
 		if (strictArgs) {
-			if (argsMatch && env[ENV_DEBUG]) {
-				log(
-					`matched via name + strict args: "${executable.name}" with args "${executable.arguments}"`,
-				);
-			}
 			return argsMatch;
 		}
 		if (firstChar === EXECUTABLE_EXACT_MATCH_PREFIX && !argsMatch) {
 			return false;
 		}
-	}
-
-	if (env[ENV_DEBUG]) {
-		const matchType =
-			firstChar === EXECUTABLE_EXACT_MATCH_PREFIX ? "exact" : "partial";
-		log(
-			`matched via ${matchType} name: "${executable.name}" in [${toCompare.slice(0, 3).join(", ")}...]`,
-		);
 	}
 
 	return true;
@@ -212,6 +191,7 @@ export default class ProcessServer {
 		number,
 		{ path: string; normalized: string; variations: string[] }
 	> = new Map();
+	private isScanning = false;
 
 	constructor(handlers: Handlers) {
 		if (!NativeImpl) return;
@@ -219,13 +199,20 @@ export default class ProcessServer {
 		this.handlers = handlers;
 		this.scan = this.scan.bind(this);
 
+		loadDatabase();
+
 		this.scan();
 		setInterval(this.scan, PROCESS_SCAN_INTERVAL);
 
 		log("started");
 	}
 
+	private pathVariationsCache: Map<string, string[]> = new Map();
+
 	private generatePathVariations(normalizedPath: string): string[] {
+		const cached = this.pathVariationsCache.get(normalizedPath);
+		if (cached) return cached;
+
 		const toCompare: string[] = [];
 		const splitPath = normalizedPath.split("/");
 
@@ -241,6 +228,20 @@ export default class ProcessServer {
 				if (p.includes(suffix)) {
 					toCompare.push(p.replace(suffix, ""));
 				}
+			}
+		}
+
+		this.pathVariationsCache.set(normalizedPath, toCompare);
+
+		if (this.pathVariationsCache.size > 1000) {
+			const keysToDelete: string[] = [];
+			let count = 0;
+			for (const key of this.pathVariationsCache.keys()) {
+				keysToDelete.push(key);
+				if (++count >= 100) break;
+			}
+			for (const key of keysToDelete) {
+				this.pathVariationsCache.delete(key);
 			}
 		}
 
@@ -286,150 +287,183 @@ export default class ProcessServer {
 	async scan(): Promise<void> {
 		if (!NativeImpl || !dbLoaded) return;
 
-		const processes = await NativeImpl.getProcesses();
-		const ids: string[] = [];
-		const activePids = new Set<number>();
-
-		for (const [pid, _path, args] of processes) {
-			activePids.add(pid);
-
-			let cached = this.pathCache.get(pid);
-			const normalizedPath = _path.toLowerCase().replaceAll("\\", "/");
-
-			if (!cached || cached.path !== _path) {
-				const variations = this.generatePathVariations(normalizedPath);
-				cached = {
-					path: _path,
-					normalized: normalizedPath,
-					variations,
-				};
-				this.pathCache.set(pid, cached);
+		if (this.isScanning) {
+			if (env[ENV_DEBUG]) {
+				log("scan already in progress, skipping");
 			}
+			return;
+		}
 
-			const toCompare = cached.variations;
+		this.isScanning = true;
 
-			const candidateApps = this.getCandidateApps(toCompare);
+		try {
+			const processes = await NativeImpl.getProcesses();
+			const ids: string[] = [];
+			const activePids = new Set<number>();
 
-			for (const { executables, id, name } of candidateApps) {
-				let matched =
-					matchesExecutable(
-						{ name, is_launcher: false },
-						toCompare,
-						args,
-						false,
-						true,
-						false,
-					) ?? false;
+			for (const [pid, _path, args] of processes) {
+				activePids.add(pid);
 
-				if (!matched) {
-					matched =
-						executables?.some((x) =>
-							matchesExecutable(
-								x,
-								toCompare,
-								args,
-								false,
-								false,
-								true,
-							),
-						) ?? false;
+				let cached = this.pathCache.get(pid);
+				const normalizedPath = _path
+					.toLowerCase()
+					.replaceAll("\\", "/");
+
+				if (!cached || cached.path !== _path) {
+					const variations =
+						this.generatePathVariations(normalizedPath);
+					cached = {
+						path: _path,
+						normalized: normalizedPath,
+						variations,
+					};
+					this.pathCache.set(pid, cached);
 				}
 
-				if (!matched) {
-					matched =
-						executables?.some((x) =>
-							matchesExecutable(
-								x,
-								toCompare,
-								args,
-								true,
-								false,
-								true,
-							),
-						) ?? false;
-				}
+				const toCompare = cached.variations;
 
-				if (!matched) {
-					matched =
-						executables?.some((x) =>
-							matchesExecutable(
-								x,
-								toCompare,
-								args,
-								false,
-								false,
-								false,
-							),
-						) ?? false;
-				}
+				const candidateApps = this.getCandidateApps(toCompare);
 
-				if (!matched) {
-					matched =
-						executables?.some((x) =>
-							matchesExecutable(
-								x,
-								toCompare,
-								args,
-								true,
-								false,
-								false,
-							),
-						) ?? false;
-				}
+				for (const { executables, id, name } of candidateApps) {
+					let matched = false;
 
-				if (matched) {
-					this.names[id] = name;
-					this.pids[id] = pid;
-
-					ids.push(id);
-					if (!this.timestamps[id]) {
-						log("detected game!", name);
-						if (env[ENV_DEBUG]) {
-							log(`  game id: ${id}`);
-							log(`  process pid: ${pid}`);
-							log(`  process path: ${_path}`);
-						}
-						this.timestamps[id] = Date.now();
+					if (
+						matchesExecutable(
+							{ name, is_launcher: false },
+							toCompare,
+							args,
+							false,
+							true,
+							false,
+						)
+					) {
+						matched = true;
 					}
 
-					const timestamp = this.timestamps[id];
-					if (!timestamp) continue;
+					if (!matched && executables) {
+						for (const exe of executables) {
+							if (
+								matchesExecutable(
+									exe,
+									toCompare,
+									args,
+									false,
+									false,
+									true,
+								) ||
+								matchesExecutable(
+									exe,
+									toCompare,
+									args,
+									true,
+									false,
+									true,
+								)
+							) {
+								matched = true;
+								break;
+							}
+						}
 
-					this.handlers.activity(
-						id,
-						{
-							application_id: id,
-							name,
-							timestamps: {
-								start: timestamp,
-							},
-						},
-						pid,
-						name,
-					);
+						if (!matched) {
+							for (const exe of executables) {
+								if (
+									matchesExecutable(
+										exe,
+										toCompare,
+										args,
+										false,
+										false,
+										false,
+									) ||
+									matchesExecutable(
+										exe,
+										toCompare,
+										args,
+										true,
+										false,
+										false,
+									)
+								) {
+									matched = true;
+									break;
+								}
+							}
+						}
+					}
 
-					break;
+					if (matched) {
+						ids.push(id);
+
+						const isNewDetection = !this.timestamps[id];
+						const pidChanged = this.pids[id] !== pid;
+
+						if (isNewDetection || pidChanged) {
+							this.names[id] = name;
+							this.pids[id] = pid;
+
+							if (isNewDetection) {
+								log("detected game!", name);
+								if (env[ENV_DEBUG]) {
+									log(`  game id: ${id}`);
+									log(`  process pid: ${pid}`);
+									log(`  process path: ${_path}`);
+									log(
+										`  matched: ${name} in path variations`,
+									);
+								}
+								this.timestamps[id] = Date.now();
+							} else if (pidChanged) {
+								log("game restarted!", name);
+								if (env[ENV_DEBUG]) {
+									log(`  old PID: ${this.pids[id]}`);
+									log(`  new PID: ${pid}`);
+								}
+								this.timestamps[id] = Date.now();
+							}
+
+							const timestamp = this.timestamps[id];
+							if (!timestamp) continue;
+
+							this.handlers.activity(
+								id,
+								{
+									application_id: id,
+									name,
+									timestamps: {
+										start: timestamp,
+									},
+								},
+								pid,
+								name,
+							);
+						}
+
+						break;
+					}
 				}
 			}
-		}
 
-		for (const cachedPid of this.pathCache.keys()) {
-			if (!activePids.has(cachedPid)) {
-				this.pathCache.delete(cachedPid);
-			}
-		}
-
-		for (const id in this.timestamps) {
-			if (!ids.includes(id)) {
-				const gameName = this.names[id];
-				log("lost game!", gameName ?? "unknown");
-				delete this.timestamps[id];
-
-				const pid = this.pids[id];
-				if (pid !== undefined) {
-					this.handlers.activity(id, null, pid);
+			for (const cachedPid of this.pathCache.keys()) {
+				if (!activePids.has(cachedPid)) {
+					this.pathCache.delete(cachedPid);
 				}
 			}
+
+			for (const id in this.timestamps) {
+				if (!ids.includes(id)) {
+					const gameName = this.names[id];
+					log("lost game!", gameName ?? "unknown");
+					delete this.timestamps[id];
+
+					const pid = this.pids[id];
+					if (pid !== undefined) {
+						this.handlers.activity(id, null, pid);
+					}
+				}
+			}
+		} finally {
+			this.isScanning = false;
 		}
 	}
 }

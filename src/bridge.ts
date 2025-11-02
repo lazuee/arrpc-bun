@@ -16,7 +16,7 @@ import { createLogger } from "./utils";
 
 const log = createLogger("bridge", ...BRIDGE_COLOR);
 
-const lastMsg: Record<string, ActivityPayload> = {};
+const lastMsg = new Map<string, ActivityPayload>();
 const clients = new Set<ServerWebSocket<unknown>>();
 let bridgeServer: Server<unknown> | undefined;
 
@@ -28,9 +28,10 @@ export function send(msg: ActivityPayload): void {
 	if (env[ENV_DEBUG]) {
 		log("sending to bridge, connected clients:", clients.size, "msg:", msg);
 	}
-	lastMsg[msg.socketId] = msg;
+	lastMsg.set(msg.socketId, msg);
+	const msgStr = JSON.stringify(msg);
 	for (const client of clients) {
-		client.send(JSON.stringify(msg));
+		client.send(msgStr);
 	}
 }
 
@@ -84,8 +85,7 @@ export async function init(): Promise<void> {
 						log("web connected");
 						clients.add(ws);
 
-						for (const id in lastMsg) {
-							const msg = lastMsg[id];
+						for (const msg of lastMsg.values()) {
 							if (msg && msg.activity != null) {
 								ws.send(JSON.stringify(msg));
 							}

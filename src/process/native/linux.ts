@@ -1,4 +1,5 @@
 import { readlinkSync } from "node:fs";
+import { join, sep } from "node:path";
 import { file, Glob } from "bun";
 import {
 	ANTI_CHEAT_EXECUTABLES,
@@ -8,58 +9,107 @@ import {
 import type { ProcessInfo } from "../../types";
 import { resolveSteamApp } from "../steam";
 
-export async function getProcesses(): Promise<ProcessInfo[]> {
-	const procDir = await Array.fromAsync(
-		new Glob("*").scan({ cwd: LINUX_PROC_DIR, onlyFiles: false }),
+const ANTI_CHEAT_EXECUTABLES_LOWER = ANTI_CHEAT_EXECUTABLES.map((ac) =>
+	ac.toLowerCase(),
+);
+
+const STEAM_PATH_INDICATORS = [
+	`${sep}.steam${sep}`,
+	`${sep}.local${sep}share${sep}steam${sep}`,
+	`${sep}steamapps${sep}`,
+] as const;
+
+function isSteamPath(pathLower: string): boolean {
+	return STEAM_PATH_INDICATORS.some((indicator) =>
+		pathLower.includes(indicator),
 	);
+}
 
+export async function getProcesses(): Promise<ProcessInfo[]> {
 	const processes: ProcessInfo[] = [];
+	const glob = new Glob("*");
+	const scanner = glob.scan({ cwd: LINUX_PROC_DIR, onlyFiles: false });
 
-	for (const pid of procDir) {
+	const BATCH_SIZE = 50;
+	const batch: Promise<ProcessInfo | null>[] = [];
+
+	for await (const pid of scanner) {
 		const pidNum = Number.parseInt(pid, 10);
 		if (pidNum <= 0) continue;
 
-		try {
-			const cmdline = await file(
-				`${LINUX_PROC_DIR}/${pid}/cmdline`,
-			).text();
+		batch.push(
+			(async (): Promise<ProcessInfo | null> => {
+				try {
+					const [cmdline, exeLink] = await Promise.all([
+						file(join(LINUX_PROC_DIR, pid, "cmdline")).text(),
+						(async () => {
+							try {
+								return readlinkSync(
+									join(LINUX_PROC_DIR, pid, "exe"),
+								);
+							} catch {
+								return null;
+							}
+						})(),
+					]);
 
-			if (!cmdline) continue;
+					if (!cmdline) return null;
 
-			const parts = cmdline.split(CMDLINE_NULL_SEPARATOR).filter(Boolean);
-			if (parts.length === 0) continue;
+					const parts = cmdline
+						.split(CMDLINE_NULL_SEPARATOR)
+						.filter(Boolean);
+					if (parts.length === 0) return null;
 
-			let exePath = parts[0] as string;
+					let exePath = parts[0] as string;
 
-			try {
-				const exeLink = readlinkSync(`${LINUX_PROC_DIR}/${pid}/exe`);
-				if (exeLink && !exeLink.includes("(deleted)")) {
-					const isWine =
-						exeLink.includes("/wine") ||
-						exeLink.includes("/wine64");
-					if (!isWine) {
-						exePath = exeLink;
+					if (exeLink && !exeLink.includes("(deleted)")) {
+						const isWine =
+							exeLink.includes(`${sep}wine`) ||
+							exeLink.includes(`${sep}wine64`);
+						if (!isWine) {
+							exePath = exeLink;
+						}
 					}
-				}
-			} catch {}
 
-			if (exePath) {
-				const exePathLower = exePath.toLowerCase();
-				const cmdlineLower = cmdline.toLowerCase();
+					if (!exePath) return null;
 
-				const isAntiCheat = ANTI_CHEAT_EXECUTABLES.some(
-					(ac) =>
-						exePathLower.includes(ac) || cmdlineLower.includes(ac),
-				);
+					const exePathLower = exePath.toLowerCase();
+					const cmdlineLower = cmdline.toLowerCase();
 
-				if (!isAntiCheat) {
-					const steamPath = await resolveSteamApp(exePath);
+					const isAntiCheat = ANTI_CHEAT_EXECUTABLES_LOWER.some(
+						(ac) =>
+							exePathLower.includes(ac) ||
+							cmdlineLower.includes(ac),
+					);
+
+					if (isAntiCheat) return null;
+
+					const steamPath = isSteamPath(exePathLower)
+						? await resolveSteamApp(exePath)
+						: null;
 					const finalPath = steamPath ?? exePath;
 
-					processes.push([pidNum, finalPath, parts.slice(1)]);
+					return [pidNum, finalPath, parts.slice(1)];
+				} catch {
+					return null;
 				}
+			})(),
+		);
+
+		if (batch.length >= BATCH_SIZE) {
+			const results = await Promise.all(batch);
+			for (const result of results) {
+				if (result) processes.push(result);
 			}
-		} catch {}
+			batch.length = 0;
+		}
+	}
+
+	if (batch.length > 0) {
+		const results = await Promise.all(batch);
+		for (const result of results) {
+			if (result) processes.push(result);
+		}
 	}
 
 	return processes;

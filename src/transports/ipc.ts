@@ -41,7 +41,7 @@ function encode(type: number, data: unknown): Buffer {
 	const dataStr = JSON.stringify(data);
 	const dataSize = Buffer.byteLength(dataStr);
 
-	const buf = Buffer.alloc(dataSize + IPC_HEADER_SIZE);
+	const buf = Buffer.allocUnsafe(dataSize + IPC_HEADER_SIZE);
 	buf.writeInt32LE(type, 0);
 	buf.writeInt32LE(dataSize, 4);
 	buf.write(dataStr, IPC_HEADER_SIZE, dataSize);
