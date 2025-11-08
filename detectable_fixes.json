@@ -28,5 +28,28 @@
 				"os": "linux"
 			}
 		]
+	},
+	{
+		"id": "STREAMERMODE",
+		"name": "OBS",
+		"aliases": ["Obs"],
+		"executables": [
+			{
+				"is_launcher": false,
+				"name": "obs",
+				"os": "linux"
+			},
+			{
+				"is_launcher": false,
+				"name": "obs.exe",
+				"os": "win32"
+			},
+			{
+				"is_launcher": false,
+				"name": "obs.app",
+				"os": "darwin"
+			}
+		],
+		"hook": true
 	}
 ]
