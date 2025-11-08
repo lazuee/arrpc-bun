@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { file } from "bun";
 
 import detectableDbRaw from "../detectable.json";
 import detectableFixesDbRaw from "../detectable_fixes.json";
@@ -7,7 +8,7 @@ export async function getDetectableDb() {
 	const dataDir = process.env[ENV_DATA_DIR];
 	if (dataDir) {
 		const customPath = join(dataDir, "detectable.json");
-		return await Bun.file(customPath).json();
+		return await file(customPath).json();
 	}
 	return detectableDbRaw;
 }
@@ -16,7 +17,7 @@ export async function getCustomDb() {
 	const dataDir = process.env[ENV_DATA_DIR];
 	if (dataDir) {
 		const customPath = join(dataDir, "detectable_fixes.json");
-		return await Bun.file(customPath).json();
+		return await file(customPath).json();
 	}
 	return detectableFixesDbRaw;
 }
@@ -27,11 +28,16 @@ export const ENV_BRIDGE_PORT = "ARRPC_BRIDGE_PORT";
 export const ENV_BRIDGE_HOST = "ARRPC_BRIDGE_HOST";
 export const ENV_WEBSOCKET_HOST = "ARRPC_WEBSOCKET_HOST";
 export const ENV_NO_BRIDGE = "ARRPC_NO_BRIDGE";
+export const ENV_NO_STATE_FILE = "ARRPC_NO_STATE_FILE";
 export const ENV_DATA_DIR = "ARRPC_DATA_DIR";
 export const ENV_IPC_MODE = "ARRPC_IPC_MODE";
 export const ENV_PARENT_MONITOR = "ARRPC_PARENT_MONITOR";
 
 export const CLI_ARG_NO_PROCESS_SCANNING = "--no-process-scanning";
+export const CLI_ARG_LIST_DATABASE = "--list-database";
+export const CLI_ARG_LIST_DETECTED = "--list-detected";
+
+export const STATE_FILE_NAME = "arrpc-state.json";
 
 export const BRIDGE_PORT_RANGE: [number, number] = [1337, 1347];
 export const BRIDGE_PORT_RANGE_HYPERV: [number, number] = [60000, 60020];
@@ -121,6 +127,8 @@ export const IPC_COLOR: [number, number, number] = [254, 231, 92];
 export const WEBSOCKET_COLOR: [number, number, number] = [235, 69, 158];
 export const PROCESS_COLOR: [number, number, number] = [237, 66, 69];
 export const STEAM_COLOR: [number, number, number] = [150, 100, 200];
+export const CLI_COLOR: [number, number, number] = [100, 200, 255];
+export const STATE_COLOR: [number, number, number] = [255, 200, 100];
 
 export enum IPCMessageType {
 	HANDSHAKE = 0,

@@ -1,4 +1,8 @@
-export type { Activity, ActivityPayload } from "./activity.d.ts";
+export type {
+	Activity,
+	ActivityPayload,
+	StateFileContent,
+} from "./activity.d.ts";
 export type {
 	DeepLinkArgs,
 	InviteArgs,

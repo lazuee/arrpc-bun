@@ -1,12 +1,17 @@
 import { env } from "bun";
 import { init as initBridge, send as sendToBridge } from "./bridge";
+import { listDatabase, listDetected } from "./cli";
 import {
+	CLI_ARG_LIST_DATABASE,
+	CLI_ARG_LIST_DETECTED,
 	DEFAULT_VERSION,
 	ENV_DEBUG,
 	ENV_IPC_MODE,
+	ENV_NO_STATE_FILE,
 	ENV_PARENT_MONITOR,
 } from "./constants";
 import Server from "./server";
+import { stateManager } from "./state";
 import { log } from "./utils";
 
 let version = DEFAULT_VERSION;
@@ -15,6 +20,16 @@ try {
 	version = pkg.default.version;
 } catch {
 	version = DEFAULT_VERSION;
+}
+
+if (process.argv.includes(CLI_ARG_LIST_DATABASE)) {
+	await listDatabase();
+	process.exit(0);
+}
+
+if (process.argv.includes(CLI_ARG_LIST_DETECTED)) {
+	await listDetected();
+	process.exit(0);
 }
 
 log(`arRPC-Bun v${version}`);
@@ -28,6 +43,9 @@ server.on("activity", (data) => {
 		log("activity event received, forwarding to bridge:", data);
 	}
 	sendToBridge(data);
+	if (!env[ENV_NO_STATE_FILE]) {
+		stateManager.update(data);
+	}
 });
 
 if (env[ENV_IPC_MODE]) {
@@ -112,8 +130,11 @@ if (env[ENV_PARENT_MONITOR]) {
 	}, 2000);
 }
 
-const shutdown = () => {
+const shutdown = async () => {
 	log("received shutdown signal");
+	if (!env[ENV_NO_STATE_FILE]) {
+		await stateManager.cleanup();
+	}
 	server.shutdown();
 	process.exit(0);
 };

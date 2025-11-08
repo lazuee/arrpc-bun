@@ -39,3 +39,15 @@ export interface ActivityPayload {
 	pid?: number;
 	socketId: string;
 }
+
+export interface StateFileContent {
+	version: string;
+	timestamp: number;
+	activities: Array<{
+		socketId: string;
+		name: string;
+		applicationId: string;
+		pid: number;
+		startTime: number | null;
+	}>;
+}
