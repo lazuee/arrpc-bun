@@ -32,6 +32,7 @@ export const ENV_NO_STATE_FILE = "ARRPC_NO_STATE_FILE";
 export const ENV_DATA_DIR = "ARRPC_DATA_DIR";
 export const ENV_IPC_MODE = "ARRPC_IPC_MODE";
 export const ENV_PARENT_MONITOR = "ARRPC_PARENT_MONITOR";
+export const ENV_IGNORE_LIST_FILE = "ARRPC_IGNORE_LIST_FILE";
 
 export const CLI_ARG_NO_PROCESS_SCANNING = "--no-process-scanning";
 export const CLI_ARG_LIST_DATABASE = "--list-database";
@@ -129,6 +130,7 @@ export const PROCESS_COLOR: [number, number, number] = [237, 66, 69];
 export const STEAM_COLOR: [number, number, number] = [150, 100, 200];
 export const CLI_COLOR: [number, number, number] = [100, 200, 255];
 export const STATE_COLOR: [number, number, number] = [255, 200, 100];
+export const IGNORE_LIST_COLOR: [number, number, number] = [255, 150, 50];
 
 export enum IPCMessageType {
 	HANDSHAKE = 0,

@@ -8,6 +8,7 @@ import {
 	PROCESS_COLOR,
 	PROCESS_SCAN_INTERVAL,
 } from "../constants";
+import { ignoreList } from "../ignore-list";
 import type { DetectableApp, Handlers, Native } from "../types";
 import { createLogger } from "../utils";
 import * as Natives from "./native/index";
@@ -192,6 +193,7 @@ export default class ProcessServer {
 		{ path: string; normalized: string; variations: string[] }
 	> = new Map();
 	private isScanning = false;
+	private ignoredGames: Set<string> = new Set();
 
 	constructor(handlers: Handlers) {
 		if (!NativeImpl) return;
@@ -393,6 +395,22 @@ export default class ProcessServer {
 					}
 
 					if (matched) {
+						const shouldIgnore = ignoreList.shouldIgnore(
+							id,
+							_path,
+							name,
+						);
+
+						if (shouldIgnore) {
+							if (env[ENV_DEBUG] && !this.ignoredGames.has(id)) {
+								log("ignoring game:", name);
+							}
+							this.ignoredGames.add(id);
+							ids.push(id);
+							break;
+						}
+
+						this.ignoredGames.delete(id);
 						ids.push(id);
 
 						const isNewDetection = !this.timestamps[id];
@@ -460,6 +478,12 @@ export default class ProcessServer {
 					if (pid !== undefined) {
 						this.handlers.activity(id, null, pid);
 					}
+				}
+			}
+
+			for (const id of this.ignoredGames) {
+				if (!ids.includes(id)) {
+					this.ignoredGames.delete(id);
 				}
 			}
 		} finally {

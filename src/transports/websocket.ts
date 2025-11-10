@@ -11,6 +11,7 @@ import {
 	WEBSOCKET_PORT_RANGE_HYPERV,
 	WS_DEFAULT_ENCODING,
 } from "../constants";
+import { ignoreList } from "../ignore-list";
 import { isHyperVEnabled } from "../platform";
 import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
 import { createLogger } from "../utils";
@@ -87,6 +88,16 @@ export default class WSServer {
 							log("unsupported version requested", ver);
 							return new Response("Unsupported version", {
 								status: 400,
+							});
+						}
+
+						if (
+							clientId &&
+							ignoreList.shouldIgnoreClientId(clientId)
+						) {
+							log("client id is ignored:", clientId);
+							return new Response("Client ID is ignored", {
+								status: 403,
 							});
 						}
 

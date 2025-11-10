@@ -17,6 +17,7 @@ import {
 	UNIX_TEMP_DIR_FALLBACK,
 	WINDOWS_IPC_PIPE_PATH,
 } from "../constants";
+import { ignoreList } from "../ignore-list";
 import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
 import { createLogger } from "../utils";
 
@@ -271,6 +272,12 @@ export default class IPCServer {
 				if (clientId === "") {
 					log("client id required");
 					extSocket.close?.(IPCErrorCode.INVALID_CLIENTID);
+					return;
+				}
+
+				if (ignoreList.shouldIgnoreClientId(clientId)) {
+					log("client id is ignored:", clientId);
+					extSocket.close?.(IPCErrorCode.TOKEN_REVOKED);
 					return;
 				}
 
