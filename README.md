@@ -55,9 +55,12 @@ Configure using environment variables:
 - `ARRPC_DEBUG` - Enable debug logging
 - `ARRPC_NO_BRIDGE` - Disable bridge server (if not needed)
 - `ARRPC_NO_PROCESS_SCANNING` - Disable automatic game detection
+- `ARRPC_STATE_FILE` - Enable state file (stores active activities to `/tmp/arrpc-state.json`)
+- `ARRPC_IGNORE_LIST_FILE` - Path to ignore list file (games to skip detection)
 - `ARRPC_BRIDGE_PORT` - Bridge port (default: 1337)
 - `ARRPC_BRIDGE_HOST` - Bridge hostname (default: `127.0.0.1`, Windows: unbound)
 - `ARRPC_WEBSOCKET_HOST` - WebSocket hostname (default: `127.0.0.1`)
+- `ARRPC_DATA_DIR` - Custom data directory for detectable databases
 
 Example:
 ```bash

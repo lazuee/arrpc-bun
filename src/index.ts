@@ -8,8 +8,8 @@ import {
 	ENV_DEBUG,
 	ENV_IGNORE_LIST_FILE,
 	ENV_IPC_MODE,
-	ENV_NO_STATE_FILE,
 	ENV_PARENT_MONITOR,
+	ENV_STATE_FILE,
 } from "./constants";
 import { ignoreList } from "./ignore-list";
 import Server from "./server";
@@ -53,7 +53,7 @@ server.on("activity", (data) => {
 		log("activity event received, forwarding to bridge:", data);
 	}
 	sendToBridge(data);
-	if (!env[ENV_NO_STATE_FILE]) {
+	if (env[ENV_STATE_FILE]) {
 		stateManager.update(data);
 	}
 });
@@ -277,7 +277,7 @@ async function handleParentMessage(message: {
 
 const shutdown = async () => {
 	log("received shutdown signal");
-	if (!env[ENV_NO_STATE_FILE]) {
+	if (env[ENV_STATE_FILE]) {
 		await stateManager.cleanup();
 	}
 	server.shutdown();

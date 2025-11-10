@@ -144,8 +144,12 @@ export default class RPCServer extends EventEmitter {
 				for (const x in timestamps) {
 					const key = x as keyof typeof timestamps;
 					const value = timestamps[key];
-					if (value && value < 10000000000) {
-						timestamps[key] = value * 1000;
+					if (value) {
+						if (value < 10000000000) {
+							timestamps[key] = value * 1000;
+						} else if (value > 10000000000000) {
+							timestamps[key] = Math.floor(value / 1000);
+						}
 					}
 				}
 			}
@@ -229,8 +233,15 @@ export default class RPCServer extends EventEmitter {
 					for (const x in timestamps) {
 						const key = x as keyof typeof timestamps;
 						const value = timestamps[key];
-						if (value && value < 10000000000) {
-							timestamps[key] = (value * 1000) as typeof value;
+						if (value) {
+							if (value < 10000000000) {
+								timestamps[key] = (value *
+									1000) as typeof value;
+							} else if (value > 10000000000000) {
+								timestamps[key] = Math.floor(
+									value / 1000,
+								) as typeof value;
+							}
 						}
 					}
 				}
