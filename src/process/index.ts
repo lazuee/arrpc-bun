@@ -302,6 +302,7 @@ export default class ProcessServer {
 			const processes = await NativeImpl.getProcesses();
 			const ids: string[] = [];
 			const activePids = new Set<number>();
+			const processedInThisScan = new Set<string>();
 
 			for (const [pid, _path, args] of processes) {
 				activePids.add(pid);
@@ -413,8 +414,14 @@ export default class ProcessServer {
 						this.ignoredGames.delete(id);
 						ids.push(id);
 
+						if (processedInThisScan.has(id)) {
+							break;
+						}
+						processedInThisScan.add(id);
+
 						const isNewDetection = !this.timestamps[id];
-						const pidChanged = this.pids[id] !== pid;
+						const oldPid = this.pids[id];
+						const pidChanged = oldPid !== pid;
 
 						if (isNewDetection || pidChanged) {
 							this.names[id] = name;
@@ -434,7 +441,7 @@ export default class ProcessServer {
 							} else if (pidChanged) {
 								log("game restarted!", name);
 								if (env[ENV_DEBUG]) {
-									log(`  old PID: ${this.pids[id]}`);
+									log(`  old PID: ${oldPid}`);
 									log(`  new PID: ${pid}`);
 								}
 								this.timestamps[id] = Date.now();
