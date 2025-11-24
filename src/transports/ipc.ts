@@ -307,6 +307,12 @@ export default class IPCServer {
 
 	onMessage(socket: ExtendedSocket, msg: RPCMessage): void {
 		if (env[ENV_DEBUG]) log("message", msg);
+
+		if (!msg || !msg.cmd) {
+			log("invalid payload - missing cmd");
+			return;
+		}
+
 		this.handlers.message(socket, msg);
 	}
 }

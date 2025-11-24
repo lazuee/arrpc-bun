@@ -198,8 +198,16 @@ export default class WSServer {
 
 	onMessage(ws: ServerWebSocket<WSData>, msg: Buffer | string): void {
 		const extSocket = ws as unknown as ExtendedWebSocket;
-		const parsedMsg = JSON.parse(msg.toString()) as RPCMessage;
-		if (env[ENV_DEBUG]) log("message", parsedMsg);
-		this.handlers.message(extSocket, parsedMsg);
+
+		try {
+			const parsedMsg = JSON.parse(msg.toString()) as RPCMessage;
+			if (env[ENV_DEBUG]) log("message", parsedMsg);
+			this.handlers.message(extSocket, parsedMsg);
+		} catch (e) {
+			log("invalid payload - malformed JSON");
+			if (env[ENV_DEBUG]) {
+				log("error:", e);
+			}
+		}
 	}
 }
