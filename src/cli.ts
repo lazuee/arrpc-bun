@@ -13,7 +13,7 @@ import {
 } from "./constants";
 import { isHyperVEnabled } from "./platform";
 import type { ActivityPayload, DetectableApp, StateFileContent } from "./types";
-import { createLogger } from "./utils";
+import { createLogger, formatDuration, getPortRange } from "./utils";
 
 const log = createLogger("cli", ...CLI_COLOR);
 
@@ -43,9 +43,11 @@ async function getBridgePort(): Promise<{ host: string; port: number }> {
 	}
 
 	const useHyperVRange = isHyperVEnabled();
-	const portRange = useHyperVRange
-		? BRIDGE_PORT_RANGE_HYPERV
-		: BRIDGE_PORT_RANGE;
+	const portRange = getPortRange(
+		BRIDGE_PORT_RANGE,
+		BRIDGE_PORT_RANGE_HYPERV,
+		useHyperVRange,
+	);
 
 	for (let port = portRange[0]; port <= portRange[1]; port++) {
 		try {
@@ -219,24 +221,13 @@ function displayDetectedGames(stateFile: StateFileContent): void {
 	for (let i = 0; i < stateFile.activities.length; i++) {
 		const activity = stateFile.activities[i];
 		if (!activity) continue;
-		let duration = "";
-		if (activity.startTime) {
-			const elapsed = Date.now() - activity.startTime;
-			const minutes = Math.floor(elapsed / 60000);
-			const hours = Math.floor(minutes / 60);
-			if (hours > 0) {
-				duration = `running for ${hours}h ${minutes % 60}m`;
-			} else {
-				duration = `running for ${minutes}m`;
-			}
-		}
 
 		console.log(`  ${i + 1}. ${activity.name}`);
 		console.log(`     App ID: ${activity.applicationId}`);
 		console.log(`     PID: ${activity.pid}`);
 		console.log(`     Socket: ${activity.socketId}`);
-		if (duration) {
-			console.log(`     Duration: ${duration}`);
+		if (activity.startTime) {
+			console.log(`     Duration: ${formatDuration(activity.startTime)}`);
 		}
 		console.log("");
 	}
@@ -264,24 +255,12 @@ function displayDetectedGamesFromMap(
 			const startTime = (activity as { timestamps?: { start?: number } })
 				.timestamps?.start;
 
-			let duration = "";
-			if (startTime) {
-				const elapsed = Date.now() - startTime;
-				const minutes = Math.floor(elapsed / 60000);
-				const hours = Math.floor(minutes / 60);
-				if (hours > 0) {
-					duration = `running for ${hours}h ${minutes % 60}m`;
-				} else {
-					duration = `running for ${minutes}m`;
-				}
-			}
-
 			console.log(`  ${index}. ${name}`);
 			console.log(`     App ID: ${appId}`);
 			console.log(`     PID: ${pid}`);
 			console.log(`     Socket: ${socketId}`);
-			if (duration) {
-				console.log(`     Duration: ${duration}`);
+			if (startTime) {
+				console.log(`     Duration: ${formatDuration(startTime)}`);
 			}
 			console.log("");
 			index++;

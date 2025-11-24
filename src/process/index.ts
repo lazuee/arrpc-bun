@@ -73,18 +73,22 @@ function buildExecutableIndex(): void {
 				? exeName.substring(1)
 				: exeName;
 
-			if (!executableIndex.has(key)) {
-				executableIndex.set(key, []);
+			let appList = executableIndex.get(key);
+			if (!appList) {
+				appList = [];
+				executableIndex.set(key, appList);
 			}
-			executableIndex.get(key)?.push(app);
+			appList.push(app);
 		}
 
 		if (process.platform === "darwin") {
 			const appKey = app.name.toLowerCase();
-			if (!executableIndex.has(appKey)) {
-				executableIndex.set(appKey, []);
+			let appList = executableIndex.get(appKey);
+			if (!appList) {
+				appList = [];
+				executableIndex.set(appKey, appList);
 			}
-			executableIndex.get(appKey)?.push(app);
+			appList.push(app);
 		}
 	}
 
@@ -240,7 +244,7 @@ export default class ProcessServer {
 			let count = 0;
 			for (const key of this.pathVariationsCache.keys()) {
 				keysToDelete.push(key);
-				if (++count >= 100) break;
+				if (++count >= 500) break;
 			}
 			for (const key of keysToDelete) {
 				this.pathVariationsCache.delete(key);
@@ -447,16 +451,13 @@ export default class ProcessServer {
 								this.timestamps[id] = Date.now();
 							}
 
-							const timestamp = this.timestamps[id];
-							if (!timestamp) continue;
-
 							this.handlers.activity(
 								id,
 								{
 									application_id: id,
 									name,
 									timestamps: {
-										start: timestamp,
+										start: this.timestamps[id],
 									},
 								},
 								pid,

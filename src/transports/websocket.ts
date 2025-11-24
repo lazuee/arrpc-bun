@@ -14,7 +14,7 @@ import {
 import { ignoreList } from "../ignore-list";
 import { isHyperVEnabled } from "../platform";
 import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
-import { createLogger } from "../utils";
+import { createLogger, getPortRange } from "../utils";
 
 const log = createLogger("websocket", ...WEBSOCKET_COLOR);
 
@@ -35,9 +35,11 @@ export default class WSServer {
 		this.onMessage = this.onMessage.bind(this);
 
 		const useHyperVRange = isHyperVEnabled();
-		const portRange = useHyperVRange
-			? WEBSOCKET_PORT_RANGE_HYPERV
-			: WEBSOCKET_PORT_RANGE;
+		const portRange = getPortRange(
+			WEBSOCKET_PORT_RANGE,
+			WEBSOCKET_PORT_RANGE_HYPERV,
+			useHyperVRange,
+		);
 
 		if (useHyperVRange) {
 			log("Hyper-V detected, using extended port range");

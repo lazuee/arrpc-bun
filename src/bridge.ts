@@ -12,7 +12,7 @@ import {
 } from "./constants";
 import { isHyperVEnabled } from "./platform";
 import type { ActivityPayload } from "./types";
-import { createLogger } from "./utils";
+import { createLogger, getPortRange } from "./utils";
 
 const log = createLogger("bridge", ...BRIDGE_COLOR);
 
@@ -42,9 +42,11 @@ export async function init(): Promise<void> {
 	}
 
 	const useHyperVRange = isHyperVEnabled();
-	const portRange = useHyperVRange
-		? BRIDGE_PORT_RANGE_HYPERV
-		: BRIDGE_PORT_RANGE;
+	const portRange = getPortRange(
+		BRIDGE_PORT_RANGE,
+		BRIDGE_PORT_RANGE_HYPERV,
+		useHyperVRange,
+	);
 
 	if (useHyperVRange) {
 		log("Hyper-V detected, using extended port range");

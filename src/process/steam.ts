@@ -154,6 +154,23 @@ async function processBatched<T, R>(
 	return results;
 }
 
+async function processLibraryApps<T>(
+	library: SteamLibrary,
+	processor: (
+		appid: string,
+		steamappsPath: string,
+		manifest: { name: string; installdir: string },
+	) => T,
+): Promise<T[]> {
+	const steamappsPath = join(library.path, "steamapps");
+	const results = await processBatched(library.apps, 50, async (appid) => {
+		const manifestPath = join(steamappsPath, `appmanifest_${appid}.acf`);
+		const manifest = await parseAppManifest(manifestPath);
+		return manifest ? processor(appid, steamappsPath, manifest) : null;
+	});
+	return results.filter((r): r is T => r !== null);
+}
+
 async function buildSteamLookup(): Promise<Map<string, string>> {
 	if (env[ENV_DEBUG]) log("building Steam app lookup table...");
 
@@ -161,35 +178,20 @@ async function buildSteamLookup(): Promise<Map<string, string>> {
 	const lookup = new Map<string, string>();
 
 	for (const library of libraries) {
-		const steamappsPath = join(library.path, "steamapps");
-
-		const results = await processBatched(
-			library.apps,
-			50,
-			async (appid) => {
-				const manifestPath = join(
+		const results = await processLibraryApps(
+			library,
+			(_appid, steamappsPath, manifest) => {
+				const installPath = join(
 					steamappsPath,
-					`appmanifest_${appid}.acf`,
+					"common",
+					manifest.installdir,
 				);
-				const manifest = await parseAppManifest(manifestPath);
-
-				if (manifest) {
-					const installPath = join(
-						steamappsPath,
-						"common",
-						manifest.installdir,
-					);
-					return [installPath, manifest.name] as [string, string];
-				}
-				return null;
+				return [installPath, manifest.name] as [string, string];
 			},
 		);
 
-		for (const result of results) {
-			if (result) {
-				const [path, name] = result;
-				lookup.set(path, name);
-			}
+		for (const [path, name] of results) {
+			lookup.set(path, name);
 		}
 	}
 
@@ -270,33 +272,16 @@ export async function initSteamApps(): Promise<SteamApp[]> {
 	const steamApps: SteamApp[] = [];
 
 	for (const library of libraries) {
-		const steamappsPath = join(library.path, "steamapps");
-
-		const results = await processBatched(
-			library.apps,
-			50,
-			async (appid) => {
-				const manifestPath = join(
-					steamappsPath,
-					`appmanifest_${appid}.acf`,
-				);
-				const manifest = await parseAppManifest(manifestPath);
-
-				if (manifest) {
-					return {
-						appid,
-						name: manifest.name,
-						installdir: manifest.installdir,
-						libraryPath: steamappsPath,
-					};
-				}
-				return null;
-			},
+		const results = await processLibraryApps(
+			library,
+			(appid, steamappsPath, manifest) => ({
+				appid,
+				name: manifest.name,
+				installdir: manifest.installdir,
+				libraryPath: steamappsPath,
+			}),
 		);
-
-		for (const result of results) {
-			if (result) steamApps.push(result);
-		}
+		steamApps.push(...results);
 	}
 
 	return steamApps;

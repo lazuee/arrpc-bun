@@ -29,7 +29,7 @@ import type {
 	RPCMessage,
 	SetActivityArgs,
 } from "./types";
-import { createLogger } from "./utils";
+import { createLogger, normalizeTimestamps } from "./utils";
 
 const log = createLogger("server", ...SERVER_COLOR);
 
@@ -137,22 +137,10 @@ export default class RPCServer extends EventEmitter {
 			typeof activity === "object" &&
 			"timestamps" in activity
 		) {
-			const timestamps = (
-				activity as { timestamps?: Record<string, number> }
-			).timestamps;
-			if (timestamps) {
-				for (const x in timestamps) {
-					const key = x as keyof typeof timestamps;
-					const value = timestamps[key];
-					if (value) {
-						if (value < 10000000000) {
-							timestamps[key] = value * 1000;
-						} else if (value > 10000000000000) {
-							timestamps[key] = Math.floor(value / 1000);
-						}
-					}
-				}
-			}
+			normalizeTimestamps(
+				(activity as { timestamps?: Record<string, number> })
+					.timestamps,
+			);
 		}
 
 		this.emit("activity", {
@@ -229,22 +217,7 @@ export default class RPCServer extends EventEmitter {
 					extra.buttons = buttons.map((x) => x.label);
 				}
 
-				if (timestamps) {
-					for (const x in timestamps) {
-						const key = x as keyof typeof timestamps;
-						const value = timestamps[key];
-						if (value) {
-							if (value < 10000000000) {
-								timestamps[key] = (value *
-									1000) as typeof value;
-							} else if (value > 10000000000000) {
-								timestamps[key] = Math.floor(
-									value / 1000,
-								) as typeof value;
-							}
-						}
-					}
-				}
+				normalizeTimestamps(timestamps);
 
 				if (env[ENV_DEBUG]) {
 					log("emitting activity event");
