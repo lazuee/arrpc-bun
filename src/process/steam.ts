@@ -202,6 +202,16 @@ async function buildSteamLookup(): Promise<Map<string, string>> {
 	return lookup;
 }
 
+export function initSteamLookup(): void {
+	if (!steamAppLookupPromise && !steamAppLookup) {
+		steamAppLookupPromise = buildSteamLookup().then((lookup) => {
+			steamAppLookup = lookup;
+			steamAppLookupPromise = null;
+			return lookup;
+		});
+	}
+}
+
 export async function resolveSteamApp(
 	processPath: string,
 ): Promise<string | null> {
@@ -211,10 +221,13 @@ export async function resolveSteamApp(
 
 	if (!steamAppLookup) {
 		if (!steamAppLookupPromise) {
-			steamAppLookupPromise = buildSteamLookup();
+			steamAppLookupPromise = buildSteamLookup().then((lookup) => {
+				steamAppLookup = lookup;
+				steamAppLookupPromise = null;
+				return lookup;
+			});
 		}
-		steamAppLookup = await steamAppLookupPromise;
-		steamAppLookupPromise = null;
+		return null;
 	}
 
 	let normalizedPath = processPath;

@@ -1,6 +1,6 @@
-import { color } from "bun";
+import { color, env } from "bun";
 
-import { ARRPC_BRAND_COLOR } from "./constants";
+import { ARRPC_BRAND_COLOR, ENV_DEBUG } from "./constants";
 
 const colorCache = new Map<string, string>();
 
@@ -28,10 +28,18 @@ export function createLogger(
 ) {
 	const brandPrefix = rgb(...ARRPC_BRAND_COLOR, "arRPC");
 	const componentPrefix = rgb(r, g, b, component);
-	const fullPrefix = `[${brandPrefix} > ${componentPrefix}]`;
+	const basePrefix = `[${brandPrefix} > ${componentPrefix}]`;
 
 	return (...args: unknown[]): void => {
-		console.log(fullPrefix, ...args);
+		if (env[ENV_DEBUG]) {
+			const timestamp = new Date()
+				.toISOString()
+				.split("T")[1]
+				?.slice(0, -1);
+			console.log(`${timestamp} ${basePrefix}`, ...args);
+		} else {
+			console.log(basePrefix, ...args);
+		}
 	};
 }
 

@@ -12,6 +12,7 @@ import { ignoreList } from "../ignore-list";
 import type { DetectableApp, Handlers, Native } from "../types";
 import { createLogger } from "../utils";
 import * as Natives from "./native/index";
+import { initSteamLookup } from "./steam";
 
 const log = createLogger("process", ...PROCESS_COLOR);
 
@@ -95,7 +96,7 @@ function buildExecutableIndex(): void {
 	log("built executable index with", executableIndex.size, "keys");
 }
 
-async function loadDatabase(): Promise<void> {
+async function loadDatabase(onComplete?: () => void): Promise<void> {
 	try {
 		DetectableDB = (await getDetectableDb()) as DetectableApp[];
 
@@ -108,6 +109,10 @@ async function loadDatabase(): Promise<void> {
 		buildExecutableIndex();
 		dbLoaded = true;
 		log("database loaded with", DetectableDB.length, "entries");
+
+		if (onComplete) {
+			onComplete();
+		}
 	} catch (error) {
 		log("failed to load database:", error);
 	}
@@ -205,15 +210,30 @@ export default class ProcessServer {
 		this.handlers = handlers;
 		this.scan = this.scan.bind(this);
 
-		loadDatabase();
+		initSteamLookup();
 
-		this.scan();
+		loadDatabase(() => {
+			if (env[ENV_DEBUG]) {
+				log("database ready, triggering first scan");
+			}
+			this.scan();
+		});
+
 		setInterval(this.scan, PROCESS_SCAN_INTERVAL);
 
 		log("started");
 	}
 
 	private pathVariationsCache: Map<string, string[]> = new Map();
+
+	private scanResultsCache: Map<string, string[]> = new Map();
+
+	private createScanCacheKey(
+		pathVariations: string[],
+		args: string[],
+	): string {
+		return `${pathVariations.join("|")}::${args.join("|")}`;
+	}
 
 	private generatePathVariations(normalizedPath: string): string[] {
 		const cached = this.pathVariationsCache.get(normalizedPath);
@@ -302,6 +322,10 @@ export default class ProcessServer {
 
 		this.isScanning = true;
 
+		if (env[ENV_DEBUG]) {
+			log("scan started");
+		}
+
 		try {
 			const processes = await NativeImpl.getProcesses();
 			const ids: string[] = [];
@@ -329,6 +353,81 @@ export default class ProcessServer {
 
 				const toCompare = cached.variations;
 
+				const cacheKey = this.createScanCacheKey(toCompare, args);
+				const cachedResults = this.scanResultsCache.get(cacheKey);
+
+				if (cachedResults) {
+					ids.push(...cachedResults);
+
+					for (const id of cachedResults) {
+						const name = this.names[id];
+						if (!name) continue;
+
+						const shouldIgnore = ignoreList.shouldIgnore(
+							id,
+							_path,
+							name,
+						);
+
+						if (shouldIgnore) {
+							if (env[ENV_DEBUG] && !this.ignoredGames.has(id)) {
+								log("ignoring game:", name);
+							}
+							this.ignoredGames.add(id);
+							continue;
+						}
+
+						this.ignoredGames.delete(id);
+
+						if (processedInThisScan.has(id)) {
+							continue;
+						}
+						processedInThisScan.add(id);
+
+						const isNewDetection = !this.timestamps[id];
+						const oldPid = this.pids[id];
+						const pidChanged = oldPid !== pid;
+
+						if (isNewDetection || pidChanged) {
+							this.names[id] = name;
+							this.pids[id] = pid;
+
+							if (isNewDetection) {
+								log("detected game!", name);
+								if (env[ENV_DEBUG]) {
+									log(`  game id: ${id}`);
+									log(`  process pid: ${pid}`);
+									log(`  process path: ${_path}`);
+									log(`  matched: ${name} (from cache)`);
+								}
+								this.timestamps[id] = Date.now();
+							} else if (pidChanged) {
+								log("game restarted!", name);
+								if (env[ENV_DEBUG]) {
+									log(`  old PID: ${oldPid}`);
+									log(`  new PID: ${pid}`);
+								}
+								this.timestamps[id] = Date.now();
+							}
+
+							this.handlers.activity(
+								id,
+								{
+									application_id: id,
+									name,
+									timestamps: {
+										start: this.timestamps[id],
+									},
+								},
+								pid,
+								name,
+							);
+						}
+					}
+					continue;
+				}
+
+				const matchedIds: string[] = [];
 				const candidateApps = this.getCandidateApps(toCompare);
 
 				for (const { executables, id, name } of candidateApps) {
@@ -400,6 +499,8 @@ export default class ProcessServer {
 					}
 
 					if (matched) {
+						matchedIds.push(id);
+
 						const shouldIgnore = ignoreList.shouldIgnore(
 							id,
 							_path,
@@ -468,6 +569,22 @@ export default class ProcessServer {
 						break;
 					}
 				}
+
+				if (matchedIds.length > 0) {
+					this.scanResultsCache.set(cacheKey, matchedIds);
+				}
+			}
+
+			if (this.scanResultsCache.size > 500) {
+				const keysToDelete: string[] = [];
+				let count = 0;
+				for (const key of this.scanResultsCache.keys()) {
+					keysToDelete.push(key);
+					if (++count >= 250) break;
+				}
+				for (const key of keysToDelete) {
+					this.scanResultsCache.delete(key);
+				}
 			}
 
 			for (const cachedPid of this.pathCache.keys()) {
@@ -495,6 +612,9 @@ export default class ProcessServer {
 				}
 			}
 		} finally {
+			if (env[ENV_DEBUG]) {
+				log("scan completed");
+			}
 			this.isScanning = false;
 		}
 	}
