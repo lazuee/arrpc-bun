@@ -1,10 +1,23 @@
 import { dlopen, FFIType, type Pointer, suffix } from "bun:ffi";
+import { sep } from "node:path";
 import { PROCESS_COLOR, SYSTEM_EXECUTABLES } from "../../constants";
 import type { ProcessInfo } from "../../types";
 import { createLogger } from "../../utils";
 import { resolveSteamApp } from "../steam";
 
 const log = createLogger("process:win32", ...PROCESS_COLOR);
+
+const STEAM_PATH_INDICATORS = [
+	`${sep}Steam${sep}`,
+	`${sep}steam${sep}`,
+	`${sep}steamapps${sep}`,
+] as const;
+
+function isSteamPath(pathLower: string): boolean {
+	return STEAM_PATH_INDICATORS.some((indicator) =>
+		pathLower.includes(indicator.toLowerCase()),
+	);
+}
 
 const TH32CS_SNAPPROCESS = 0x00000002;
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
@@ -294,7 +307,10 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 						fullPath = exeFile;
 					}
 
-					const steamPath = await resolveSteamApp(fullPath);
+					const fullPathLower = fullPath.toLowerCase();
+					const steamPath = isSteamPath(fullPathLower)
+						? await resolveSteamApp(fullPath)
+						: null;
 					const finalPath = steamPath ?? fullPath;
 
 					processes.push([pid, finalPath, args]);
