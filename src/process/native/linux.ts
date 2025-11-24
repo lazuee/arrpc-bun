@@ -40,7 +40,7 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 		batch.push(
 			(async (): Promise<ProcessInfo | null> => {
 				try {
-					const [cmdline, exeLink] = await Promise.all([
+					const [cmdline, exeLink, stat] = await Promise.all([
 						file(join(LINUX_PROC_DIR, pid, "cmdline")).text(),
 						(async () => {
 							try {
@@ -51,9 +51,28 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 								return null;
 							}
 						})(),
+						(async () => {
+							try {
+								return await file(
+									join(LINUX_PROC_DIR, pid, "stat"),
+								).text();
+							} catch {
+								return null;
+							}
+						})(),
 					]);
 
 					if (!cmdline) return null;
+
+					if (stat) {
+						const statMatch = stat.match(/\)\s+([A-Za-z])/);
+						if (statMatch) {
+							const state = statMatch[1];
+							if (state === "T" || state === "t") {
+								return null;
+							}
+						}
+					}
 
 					const parts = cmdline
 						.split(CMDLINE_NULL_SEPARATOR)
