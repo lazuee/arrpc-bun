@@ -69,15 +69,10 @@ ARRPC_DEBUG=1 bun start
 
 ## Features
 
-- **IPC Transport** - Unix sockets / Windows named pipes
-- **WebSocket Transport** - Discord RPC protocol over WebSocket
-- **Process Scanning** - Automatic game detection (Windows, Linux)
-- **Bridge Server** - WebSocket bridge for web clients
-- Supports: `SET_ACTIVITY`, `INVITE_BROWSER`, `DEEP_LINK`, and more
+**[View Complete Feature List](FEATURES.md)**
 
 ## License
 
 MIT
 
 Based on [arRPC](https://github.com/OpenAsar/arrpc) by OpenAsar
-
