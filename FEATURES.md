@@ -111,6 +111,7 @@ Complete feature overview of arRPC-Bun implementation.
 ### Configuration
 - Environment variable configuration
   - Debug logging (`ARRPC_DEBUG`)
+  - Disable Steam support (`ARRPC_NO_STEAM`)
   - Custom data directory
   - State file export (`/tmp/arrpc-state.json`)
   - Ignore list with file persistence

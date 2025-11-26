@@ -55,6 +55,7 @@ Configure using environment variables:
 - `ARRPC_DEBUG` - Enable debug logging
 - `ARRPC_NO_BRIDGE` - Disable bridge server (if not needed)
 - `ARRPC_NO_PROCESS_SCANNING` - Disable automatic game detection
+- `ARRPC_NO_STEAM` - Disable Steam game detection and lookup
 - `ARRPC_STATE_FILE` - Enable state file (stores active activities to `/tmp/arrpc-state.json`)
 - `ARRPC_IGNORE_LIST_FILE` - Path to ignore list file (games to skip detection)
 - `ARRPC_BRIDGE_PORT` - Bridge port (default: 1337)

@@ -1,7 +1,12 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { env, file } from "bun";
-import { ENV_DEBUG, STEAM_COLOR, STEAM_RUNTIME_PATHS } from "../constants";
+import {
+	ENV_DEBUG,
+	ENV_NO_STEAM,
+	STEAM_COLOR,
+	STEAM_RUNTIME_PATHS,
+} from "../constants";
 import type { SteamApp } from "../types/process";
 import { createLogger } from "../utils";
 
@@ -203,6 +208,13 @@ async function buildSteamLookup(): Promise<Map<string, string>> {
 }
 
 export function initSteamLookup(): void {
+	if (env[ENV_NO_STEAM]) {
+		if (env[ENV_DEBUG]) {
+			log("Steam support disabled via ARRPC_NO_STEAM");
+		}
+		return;
+	}
+
 	if (!steamAppLookupPromise && !steamAppLookup) {
 		steamAppLookupPromise = buildSteamLookup().then((lookup) => {
 			steamAppLookup = lookup;
@@ -215,6 +227,10 @@ export function initSteamLookup(): void {
 export async function resolveSteamApp(
 	processPath: string,
 ): Promise<string | null> {
+	if (env[ENV_NO_STEAM]) {
+		return null;
+	}
+
 	if (resolvedPathCache.has(processPath)) {
 		return resolvedPathCache.get(processPath) ?? null;
 	}

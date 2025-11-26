@@ -24,6 +24,7 @@ export async function getCustomDb() {
 
 export const ENV_DEBUG = "ARRPC_DEBUG";
 export const ENV_NO_PROCESS_SCANNING = "ARRPC_NO_PROCESS_SCANNING";
+export const ENV_NO_STEAM = "ARRPC_NO_STEAM";
 export const ENV_BRIDGE_PORT = "ARRPC_BRIDGE_PORT";
 export const ENV_BRIDGE_HOST = "ARRPC_BRIDGE_HOST";
 export const ENV_WEBSOCKET_HOST = "ARRPC_WEBSOCKET_HOST";
