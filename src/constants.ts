@@ -133,6 +133,10 @@ export const CLI_COLOR: [number, number, number] = [100, 200, 255];
 export const STATE_COLOR: [number, number, number] = [255, 200, 100];
 export const IGNORE_LIST_COLOR: [number, number, number] = [255, 150, 50];
 
+export const LOG_COLOR_WARN: [number, number, number] = [255, 200, 0];
+export const LOG_COLOR_ERROR: [number, number, number] = [255, 80, 80];
+export const LOG_COLOR_TIMESTAMP: [number, number, number] = [128, 128, 128];
+
 export enum IPCMessageType {
 	HANDSHAKE = 0,
 	FRAME = 1,

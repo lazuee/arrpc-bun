@@ -26,7 +26,12 @@ export function getPort(): number | undefined {
 
 export function send(msg: ActivityPayload): void {
 	if (env[ENV_DEBUG]) {
-		log("sending to bridge, connected clients:", clients.size, "msg:", msg);
+		log.info(
+			"sending to bridge, connected clients:",
+			clients.size,
+			"msg:",
+			msg,
+		);
 	}
 	lastMsg.set(msg.socketId, msg);
 	const msgStr = JSON.stringify(msg);
@@ -37,7 +42,7 @@ export function send(msg: ActivityPayload): void {
 
 export async function init(): Promise<void> {
 	if (env[ENV_NO_BRIDGE]) {
-		log("bridge disabled via ENV_NO_BRIDGE");
+		log.info("bridge disabled via ENV_NO_BRIDGE");
 		return;
 	}
 
@@ -49,7 +54,7 @@ export async function init(): Promise<void> {
 	);
 
 	if (useHyperVRange) {
-		log("Hyper-V detected, using extended port range");
+		log.info("Hyper-V detected, using extended port range");
 	}
 
 	let startPort = portRange[0];
@@ -67,7 +72,7 @@ export async function init(): Promise<void> {
 	let server: Server<unknown> | undefined;
 
 	while (port <= portRange[1]) {
-		if (env[ENV_DEBUG]) log("trying port", port);
+		if (env[ENV_DEBUG]) log.info("trying port", port);
 
 		try {
 			server = serve({
@@ -84,7 +89,7 @@ export async function init(): Promise<void> {
 				},
 				websocket: {
 					open(ws) {
-						log("web connected");
+						log.info("web connected");
 						clients.add(ws);
 
 						for (const msg of lastMsg.values()) {
@@ -95,14 +100,14 @@ export async function init(): Promise<void> {
 					},
 					message() {},
 					close(ws) {
-						log("web disconnected");
+						log.info("web disconnected");
 						clients.delete(ws);
 					},
 				},
 			});
 
 			bridgeServer = server;
-			log("listening on", port);
+			log.info("listening on", port);
 
 			if (env[ENV_IPC_MODE]) {
 				process.stderr.write(
@@ -121,7 +126,7 @@ export async function init(): Promise<void> {
 		} catch (e) {
 			const error = e as { code?: string; message?: string };
 			if (error.code === "EADDRINUSE") {
-				log(port, "in use!");
+				log.info(port, "in use!");
 				port++;
 				continue;
 			}

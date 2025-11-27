@@ -59,7 +59,7 @@ function mergeCustomEntries(
 		}
 	}
 
-	log(`loaded ${source} with`, customEntries.length, "entries");
+	log.info(`loaded ${source} with`, customEntries.length, "entries");
 }
 
 function buildExecutableIndex(): void {
@@ -93,7 +93,7 @@ function buildExecutableIndex(): void {
 		}
 	}
 
-	log("built executable index with", executableIndex.size, "keys");
+	log.info("built executable index with", executableIndex.size, "keys");
 }
 
 async function loadDatabase(onComplete?: () => void): Promise<void> {
@@ -108,13 +108,13 @@ async function loadDatabase(onComplete?: () => void): Promise<void> {
 
 		buildExecutableIndex();
 		dbLoaded = true;
-		log("database loaded with", DetectableDB.length, "entries");
+		log.info("database loaded with", DetectableDB.length, "entries");
 
 		if (onComplete) {
 			onComplete();
 		}
 	} catch (error) {
-		log("failed to load database:", error);
+		log.info("failed to load database:", error);
 	}
 }
 
@@ -214,14 +214,14 @@ export default class ProcessServer {
 
 		loadDatabase(() => {
 			if (env[ENV_DEBUG]) {
-				log("database ready, triggering first scan");
+				log.info("database ready, triggering first scan");
 			}
 			this.scan();
 		});
 
 		setInterval(this.scan, PROCESS_SCAN_INTERVAL);
 
-		log("started");
+		log.info("started");
 	}
 
 	private pathVariationsCache: Map<string, string[]> = new Map();
@@ -315,7 +315,7 @@ export default class ProcessServer {
 
 		if (this.isScanning) {
 			if (env[ENV_DEBUG]) {
-				log("scan already in progress, skipping");
+				log.info("scan already in progress, skipping");
 			}
 			return;
 		}
@@ -323,7 +323,7 @@ export default class ProcessServer {
 		this.isScanning = true;
 
 		if (env[ENV_DEBUG]) {
-			log("scan started");
+			log.info("scan started");
 		}
 
 		try {
@@ -371,7 +371,7 @@ export default class ProcessServer {
 
 						if (shouldIgnore) {
 							if (env[ENV_DEBUG] && !this.ignoredGames.has(id)) {
-								log("ignoring game:", name);
+								log.info("ignoring game:", name);
 							}
 							this.ignoredGames.add(id);
 							continue;
@@ -393,19 +393,19 @@ export default class ProcessServer {
 							this.pids[id] = pid;
 
 							if (isNewDetection) {
-								log("detected game!", name);
+								log.info("detected game!", name);
 								if (env[ENV_DEBUG]) {
-									log(`  game id: ${id}`);
-									log(`  process pid: ${pid}`);
-									log(`  process path: ${_path}`);
-									log(`  matched: ${name} (from cache)`);
+									log.info(`  game id: ${id}`);
+									log.info(`  process pid: ${pid}`);
+									log.info(`  process path: ${_path}`);
+									log.info(`  matched: ${name} (from cache)`);
 								}
 								this.timestamps[id] = Date.now();
 							} else if (pidChanged) {
-								log("game restarted!", name);
+								log.info("game restarted!", name);
 								if (env[ENV_DEBUG]) {
-									log(`  old PID: ${oldPid}`);
-									log(`  new PID: ${pid}`);
+									log.info(`  old PID: ${oldPid}`);
+									log.info(`  new PID: ${pid}`);
 								}
 								this.timestamps[id] = Date.now();
 							}
@@ -509,7 +509,7 @@ export default class ProcessServer {
 
 						if (shouldIgnore) {
 							if (env[ENV_DEBUG] && !this.ignoredGames.has(id)) {
-								log("ignoring game:", name);
+								log.info("ignoring game:", name);
 							}
 							this.ignoredGames.add(id);
 							ids.push(id);
@@ -533,21 +533,21 @@ export default class ProcessServer {
 							this.pids[id] = pid;
 
 							if (isNewDetection) {
-								log("detected game!", name);
+								log.info("detected game!", name);
 								if (env[ENV_DEBUG]) {
-									log(`  game id: ${id}`);
-									log(`  process pid: ${pid}`);
-									log(`  process path: ${_path}`);
-									log(
+									log.info(`  game id: ${id}`);
+									log.info(`  process pid: ${pid}`);
+									log.info(`  process path: ${_path}`);
+									log.info(
 										`  matched: ${name} in path variations`,
 									);
 								}
 								this.timestamps[id] = Date.now();
 							} else if (pidChanged) {
-								log("game restarted!", name);
+								log.info("game restarted!", name);
 								if (env[ENV_DEBUG]) {
-									log(`  old PID: ${oldPid}`);
-									log(`  new PID: ${pid}`);
+									log.info(`  old PID: ${oldPid}`);
+									log.info(`  new PID: ${pid}`);
 								}
 								this.timestamps[id] = Date.now();
 							}
@@ -596,7 +596,7 @@ export default class ProcessServer {
 			for (const id in this.timestamps) {
 				if (!ids.includes(id)) {
 					const gameName = this.names[id];
-					log("lost game!", gameName ?? "unknown");
+					log.info("lost game!", gameName ?? "unknown");
 					delete this.timestamps[id];
 
 					const pid = this.pids[id];
@@ -613,7 +613,7 @@ export default class ProcessServer {
 			}
 		} finally {
 			if (env[ENV_DEBUG]) {
-				log("scan completed");
+				log.info("scan completed");
 			}
 			this.isScanning = false;
 		}

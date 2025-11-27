@@ -16,7 +16,7 @@ class StateManager {
 	constructor() {
 		this.stateFilePath = join(tmpdir(), STATE_FILE_NAME);
 		if (env[ENV_DEBUG]) {
-			log(`state file path: ${this.stateFilePath}`);
+			log.info(`state file path: ${this.stateFilePath}`);
 		}
 	}
 
@@ -67,12 +67,12 @@ class StateManager {
 		try {
 			await write(this.stateFilePath, JSON.stringify(content, null, 2));
 			if (env[ENV_DEBUG]) {
-				log(
+				log.info(
 					`wrote state file: ${content.activities.length} activities`,
 				);
 			}
 		} catch (error) {
-			log(`failed to write state file: ${error}`);
+			log.info(`failed to write state file: ${error}`);
 		}
 	}
 
@@ -90,10 +90,10 @@ class StateManager {
 				}),
 			);
 			if (env[ENV_DEBUG]) {
-				log("cleaned up state file");
+				log.info("cleaned up state file");
 			}
 		} catch (error) {
-			log(`failed to cleanup state file: ${error}`);
+			log.info(`failed to cleanup state file: ${error}`);
 		}
 	}
 }

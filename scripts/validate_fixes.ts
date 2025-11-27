@@ -3,6 +3,7 @@ import {
 	getDetectableDb,
 	VALID_PLATFORMS,
 } from "../src/constants";
+import { print, printError } from "../src/logger";
 import type { DetectableApp } from "../src/types";
 
 interface ValidationError {
@@ -17,13 +18,13 @@ function addError(path: string, message: string): void {
 }
 
 async function validateCustomJson(): Promise<boolean> {
-	console.log("Validating detectable_fixes.json...\n");
+	print("Validating detectable_fixes.json...\n");
 
 	let customEntries: unknown;
 	try {
 		customEntries = await getCustomDb();
 	} catch {
-		console.log("No detectable_fixes.json file found (this is okay)");
+		print("No detectable_fixes.json file found (this is okay)");
 		return true;
 	}
 
@@ -184,13 +185,11 @@ async function validateCustomJson(): Promise<boolean> {
 
 		if (errors.length === 0) {
 			if (existsInDb) {
-				console.log(
-					`Entry ${i}: Patches existing game (ID: ${entry.id})`,
-				);
+				print(`Entry ${i}: Patches existing game (ID: ${entry.id})`);
 			} else {
-				console.log(`Entry ${i}: Adds new game (ID: ${entry.id})`);
+				print(`Entry ${i}: Adds new game (ID: ${entry.id})`);
 				if (!("name" in entry)) {
-					console.log(
+					print(
 						"Warning: New game without 'name' field will use \"Custom Game\"",
 					);
 				}
@@ -204,12 +203,12 @@ async function validateCustomJson(): Promise<boolean> {
 const _isValid = await validateCustomJson();
 
 if (errors.length > 0) {
-	console.log("\n❌ Validation failed with errors:\n");
+	printError("\nValidation failed with errors:\n");
 	for (const error of errors) {
-		console.log(`  ${error.path}: ${error.message}`);
+		printError(`  ${error.path}: ${error.message}`);
 	}
 	process.exit(1);
 }
 
-console.log("\ndetectable_fixes.json is valid!");
+print("\ndetectable_fixes.json is valid!");
 process.exit(0);

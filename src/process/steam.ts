@@ -60,7 +60,7 @@ async function parseSteamLibraries(): Promise<SteamLibrary[]> {
 
 		try {
 			if (env[ENV_DEBUG])
-				log("checking for libraryfolders.vdf at", vdfPath);
+				log.info("checking for libraryfolders.vdf at", vdfPath);
 			const content = await file(vdfPath).text();
 
 			const libraryIdMatches = content.matchAll(/"(\d+)"\s*\{/g);
@@ -106,20 +106,20 @@ async function parseSteamLibraries(): Promise<SteamLibrary[]> {
 
 			if (libraries.length > 0) {
 				if (env[ENV_DEBUG]) {
-					log(`found ${libraries.length} Steam libraries:`);
+					log.info(`found ${libraries.length} Steam libraries:`);
 					for (const lib of libraries) {
-						log(`  - ${lib.path} (${lib.apps.length} apps)`);
+						log.info(`  - ${lib.path} (${lib.apps.length} apps)`);
 					}
 				}
 				break;
 			}
 		} catch (error) {
-			if (env[ENV_DEBUG]) log("failed to read", vdfPath, error);
+			if (env[ENV_DEBUG]) log.info("failed to read", vdfPath, error);
 		}
 	}
 
 	if (libraries.length === 0 && env[ENV_DEBUG]) {
-		log("no Steam libraries found");
+		log.info("no Steam libraries found");
 	}
 
 	return libraries;
@@ -177,7 +177,7 @@ async function processLibraryApps<T>(
 }
 
 async function buildSteamLookup(): Promise<Map<string, string>> {
-	if (env[ENV_DEBUG]) log("building Steam app lookup table...");
+	if (env[ENV_DEBUG]) log.info("building Steam app lookup table...");
 
 	const libraries = await parseSteamLibraries();
 	const lookup = new Map<string, string>();
@@ -201,7 +201,7 @@ async function buildSteamLookup(): Promise<Map<string, string>> {
 	}
 
 	if (env[ENV_DEBUG]) {
-		log(`built lookup table with ${lookup.size} Steam apps`);
+		log.info(`built lookup table with ${lookup.size} Steam apps`);
 	}
 
 	return lookup;
@@ -210,7 +210,7 @@ async function buildSteamLookup(): Promise<Map<string, string>> {
 export function initSteamLookup(): void {
 	if (env[ENV_NO_STEAM]) {
 		if (env[ENV_DEBUG]) {
-			log("Steam support disabled via ARRPC_NO_STEAM");
+			log.info("Steam support disabled via ARRPC_NO_STEAM");
 		}
 		return;
 	}
@@ -262,7 +262,7 @@ export async function resolveSteamApp(
 	);
 	if (isRuntimeProcess) {
 		if (env[ENV_DEBUG]) {
-			log(
+			log.info(
 				`skipping Steam runtime/infrastructure process: ${processPath}`,
 			);
 		}
@@ -279,13 +279,13 @@ export async function resolveSteamApp(
 			const resolvedPath = join(installPath, `${appName}.app_name`);
 			if (env[ENV_DEBUG]) {
 				if (isWinePath) {
-					log(
+					log.info(
 						`normalized Wine path: ${processPath} -> ${normalizedPath}`,
 					);
 				}
-				log(`detected Steam app: "${appName}"`);
-				log(`  process path: ${processPath}`);
-				log(`  resolved to: ${resolvedPath}`);
+				log.info(`detected Steam app: "${appName}"`);
+				log.info(`  process path: ${processPath}`);
+				log.info(`  resolved to: ${resolvedPath}`);
 			}
 			resolvedPathCache.set(processPath, resolvedPath);
 			return resolvedPath;

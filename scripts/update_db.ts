@@ -1,14 +1,15 @@
 import { write } from "bun";
+import { print, printError } from "../src/logger";
 import type { DetectableApp } from "../src/types";
 
-console.log("Fetching detectable.json from Discord API...");
+print("Fetching detectable.json from Discord API...");
 
 let current: DetectableApp[] = [];
 try {
 	const detectableDbRaw = await import("../detectable.json");
 	current = detectableDbRaw.default as DetectableApp[];
 } catch {
-	console.log("No existing detectable.json found, starting fresh");
+	print("No existing detectable.json found, starting fresh");
 }
 
 const response = await fetch(
@@ -16,7 +17,7 @@ const response = await fetch(
 );
 
 if (!response.ok) {
-	console.error(`Failed to fetch detectable.json: HTTP ${response.status}`);
+	printError(`Failed to fetch detectable.json: HTTP ${response.status}`);
 	process.exit(1);
 }
 
@@ -26,8 +27,8 @@ await write(
 	JSON.stringify(updated, null, 2),
 );
 
-console.log("Updated detectable.json");
-console.log(
+print("Updated detectable.json");
+print(
 	`  ${current.length} -> ${updated.length} games (+${updated.length - current.length})`,
 );
 
@@ -36,20 +37,20 @@ const newNames = updated.map((x) => x.name);
 const newGames = newNames.filter((x) => !oldNames.includes(x));
 
 if (newGames.length > 0) {
-	console.log("  New games:", newGames.slice(0, 5).join(", "));
+	print(`  New games: ${newGames.slice(0, 5).join(", ")}`);
 	if (newGames.length > 5) {
-		console.log(`  ... and ${newGames.length - 5} more`);
+		print(`  ... and ${newGames.length - 5} more`);
 	}
 }
 
-console.log("\nFetching detectable_fixes.json from upstream...");
+print("\nFetching detectable_fixes.json from upstream...");
 
 let currentFixesData: Partial<DetectableApp>[] = [];
 try {
 	const detectableFixesDbRaw = await import("../detectable_fixes.json");
 	currentFixesData = detectableFixesDbRaw.default as Partial<DetectableApp>[];
 } catch {
-	console.log("No existing detectable_fixes.json found, starting fresh");
+	print("No existing detectable_fixes.json found, starting fresh");
 }
 
 const fixesResponse = await fetch(
@@ -57,10 +58,10 @@ const fixesResponse = await fetch(
 );
 
 if (!fixesResponse.ok) {
-	console.error(
+	printError(
 		`Failed to fetch detectable_fixes.json: HTTP ${fixesResponse.status}`,
 	);
-	console.log("Keeping existing detectable_fixes.json");
+	print("Keeping existing detectable_fixes.json");
 } else {
 	const updatedFixes =
 		(await fixesResponse.json()) as Partial<DetectableApp>[];
@@ -68,8 +69,8 @@ if (!fixesResponse.ok) {
 		new URL("../detectable_fixes.json", import.meta.url),
 		JSON.stringify(updatedFixes, null, "\t"),
 	);
-	console.log("Updated detectable_fixes.json");
-	console.log(
+	print("Updated detectable_fixes.json");
+	print(
 		`  ${currentFixesData.length} -> ${updatedFixes.length} entries (+${updatedFixes.length - currentFixesData.length})`,
 	);
 
@@ -78,8 +79,8 @@ if (!fixesResponse.ok) {
 	const newFixes = newFixIds.filter((x) => !oldFixIds.includes(x));
 
 	if (newFixes.length > 0) {
-		console.log("  New fixes:", newFixes.join(", "));
+		print(`  New fixes: ${newFixes.join(", ")}`);
 	}
 }
 
-console.log("\nDatabase update complete!");
+print("\nDatabase update complete!");

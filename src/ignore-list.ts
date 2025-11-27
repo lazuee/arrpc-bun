@@ -24,7 +24,7 @@ class IgnoreListManager {
 				const games = (await f.json()) as string[];
 
 				if (!Array.isArray(games)) {
-					log("invalid file format, expected array");
+					log.info("invalid file format, expected array");
 					return;
 				}
 
@@ -35,10 +35,10 @@ class IgnoreListManager {
 					}
 				}
 
-				log(`loaded ${this.ignoreSet.size} entries from file`);
+				log.info(`loaded ${this.ignoreSet.size} entries from file`);
 			}
 		} catch (error) {
-			log("failed to load from file:", error);
+			log.info("failed to load from file:", error);
 		}
 	}
 
@@ -49,7 +49,7 @@ class IgnoreListManager {
 			const games = Array.from(this.ignoreSet);
 			await write(this.filePath, JSON.stringify(games, null, 2));
 		} catch (error) {
-			log("failed to save to file:", error);
+			log.info("failed to save to file:", error);
 		}
 	}
 

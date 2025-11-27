@@ -14,7 +14,7 @@ import {
 import { ignoreList } from "./ignore-list";
 import Server from "./server";
 import { stateManager } from "./state";
-import { log } from "./utils";
+import { logger as log } from "./utils";
 
 let version = DEFAULT_VERSION;
 try {
@@ -34,12 +34,12 @@ if (process.argv.includes(CLI_ARG_LIST_DETECTED)) {
 	process.exit(0);
 }
 
-log(`arRPC-Bun v${version}`);
+log.info(`arRPC-Bun v${version}`);
 
 const ignoreListFile = env[ENV_IGNORE_LIST_FILE];
 if (ignoreListFile) {
 	await ignoreList.initialize(ignoreListFile);
-	log(`ignore list enabled with file: ${ignoreListFile}`);
+	log.info(`ignore list enabled with file: ${ignoreListFile}`);
 } else {
 	await ignoreList.initialize();
 }
@@ -50,7 +50,7 @@ const server = await Server.create();
 
 server.on("activity", (data) => {
 	if (env[ENV_DEBUG]) {
-		log("activity event received, forwarding to bridge:", data);
+		log.info("activity event received, forwarding to bridge:", data);
 	}
 	sendToBridge(data);
 	if (env[ENV_STATE_FILE]) {
@@ -76,7 +76,7 @@ if (env[ENV_PARENT_MONITOR]) {
 	const handleParentDeath = () => {
 		if (shutdownTriggered) return;
 		shutdownTriggered = true;
-		log("parent process died, shutting down");
+		log.info("parent process died, shutting down");
 		shutdown();
 	};
 
@@ -108,7 +108,7 @@ if (env[ENV_PARENT_MONITOR]) {
 					await handleParentMessage(message);
 				} catch (err) {
 					if (env[ENV_DEBUG]) {
-						log(`failed to parse stdin message: ${err}`);
+						log.info(`failed to parse stdin message: ${err}`);
 					}
 				}
 			}
@@ -116,7 +116,7 @@ if (env[ENV_PARENT_MONITOR]) {
 
 		process.stdin.on("end", () => {
 			if (env[ENV_DEBUG]) {
-				log("stdin closed");
+				log.info("stdin closed");
 			}
 			handleParentDeath();
 		});
@@ -132,7 +132,7 @@ if (env[ENV_PARENT_MONITOR]) {
 
 		const currentParentPid = process.ppid;
 		if (currentParentPid !== initialParentPid) {
-			log(
+			log.info(
 				`parent process changed from ${initialParentPid} to ${currentParentPid}, shutting down`,
 			);
 			clearInterval(parentMonitor);
@@ -143,7 +143,7 @@ if (env[ENV_PARENT_MONITOR]) {
 		try {
 			process.kill(initialParentPid, 0);
 		} catch {
-			log(
+			log.info(
 				`parent process ${initialParentPid} no longer exists, shutting down`,
 			);
 			clearInterval(parentMonitor);
@@ -159,12 +159,12 @@ if (env[ENV_PARENT_MONITOR]) {
 				})}\n`;
 				const written = process.stderr.write(heartbeat);
 				if (!written) {
-					log("heartbeat write failed, parent likely dead");
+					log.info("heartbeat write failed, parent likely dead");
 					clearInterval(parentMonitor);
 					handleParentDeath();
 				}
 			} catch (err) {
-				log(`heartbeat error: ${err}, parent likely dead`);
+				log.info(`heartbeat error: ${err}, parent likely dead`);
 				clearInterval(parentMonitor);
 				handleParentDeath();
 			}
@@ -177,7 +177,7 @@ async function handleParentMessage(message: {
 	data?: { games?: string[] };
 }) {
 	if (env[ENV_DEBUG]) {
-		log(`received parent message: ${JSON.stringify(message)}`);
+		log.info(`received parent message: ${JSON.stringify(message)}`);
 	}
 
 	try {
@@ -255,7 +255,7 @@ async function handleParentMessage(message: {
 
 			default:
 				if (env[ENV_DEBUG]) {
-					log(`unknown parent message type: ${message.type}`);
+					log.info(`unknown parent message type: ${message.type}`);
 				}
 		}
 	} catch (err) {
@@ -276,7 +276,7 @@ async function handleParentMessage(message: {
 }
 
 const shutdown = async () => {
-	log("received shutdown signal");
+	log.info("received shutdown signal");
 	if (env[ENV_STATE_FILE]) {
 		await stateManager.cleanup();
 	}

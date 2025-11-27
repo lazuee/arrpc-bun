@@ -103,7 +103,7 @@ async function socketIsAvailable(socket: Socket): Promise<boolean> {
 		try {
 			read(socket as ExtendedSocket);
 		} catch (e: unknown) {
-			log("error whilst reading", e);
+			log.info("error whilst reading", e);
 
 			socket.end(
 				encode(IPCMessageType.CLOSE, {
@@ -120,7 +120,7 @@ async function socketIsAvailable(socket: Socket): Promise<boolean> {
 			socket.end();
 			socket.destroy();
 		} catch (e: unknown) {
-			if (env[ENV_DEBUG]) log("error stopping socket", e);
+			if (env[ENV_DEBUG]) log.info("error stopping socket", e);
 		}
 	};
 
@@ -142,7 +142,7 @@ async function socketIsAvailable(socket: Socket): Promise<boolean> {
 	const outcome = await possibleOutcomes;
 	stop();
 	if (env[ENV_DEBUG]) {
-		log(
+		log.info(
 			"checked if socket is available:",
 			outcome === true,
 			outcome === true ? "" : `- reason: ${outcome}`,
@@ -160,20 +160,20 @@ async function getAvailableSocket(tries = 0): Promise<string> {
 	const path = `${getSocketPath()}-${tries}`;
 	const socket = createConnection(path);
 
-	if (env[ENV_DEBUG]) log("checking", path);
+	if (env[ENV_DEBUG]) log.info("checking", path);
 
 	if (await socketIsAvailable(socket)) {
 		if (process.platform !== "win32") {
 			try {
 				await file(path).unlink();
 			} catch (e: unknown) {
-				if (env[ENV_DEBUG]) log("error unlinking socket", e);
+				if (env[ENV_DEBUG]) log.info("error unlinking socket", e);
 			}
 		}
 		return path;
 	}
 
-	log(`not available, trying again (attempt ${tries + 1})`);
+	log.info(`not available, trying again (attempt ${tries + 1})`);
 	return getAvailableSocket(tries + 1);
 }
 
@@ -191,14 +191,14 @@ export default class IPCServer {
 
 		const server = createServer(ipcServer.onConnection);
 		server.on("error", (e) => {
-			log("server error", e);
+			log.info("server error", e);
 		});
 
 		const socketPath = await getAvailableSocket();
 
 		return new Promise((resolve) => {
 			server.listen(socketPath, () => {
-				log("listening at", socketPath);
+				log.info("listening at", socketPath);
 
 				if (env[ENV_IPC_MODE]) {
 					process.stderr.write(
@@ -219,14 +219,14 @@ export default class IPCServer {
 
 	onConnection(socket: Socket): void {
 		const extSocket = socket as ExtendedSocket;
-		log("new connection!");
+		log.info("new connection!");
 
 		socket.pause();
 		socket.on("readable", () => {
 			try {
 				read(extSocket);
 			} catch (e: unknown) {
-				log("error whilst reading", e);
+				log.info("error whilst reading", e);
 
 				socket.end(
 					encode(IPCMessageType.CLOSE, {
@@ -242,7 +242,7 @@ export default class IPCServer {
 		socket.once(
 			"handshake",
 			(params: { v?: string; client_id?: string }) => {
-				if (env[ENV_DEBUG]) log("handshake:", params);
+				if (env[ENV_DEBUG]) log.info("handshake:", params);
 
 				const ver = Number.parseInt(
 					params.v ?? String(RPC_PROTOCOL_VERSION),
@@ -264,29 +264,29 @@ export default class IPCServer {
 				};
 
 				if (ver !== RPC_PROTOCOL_VERSION) {
-					log("unsupported version requested", ver);
+					log.info("unsupported version requested", ver);
 					extSocket.close?.(IPCErrorCode.INVALID_VERSION);
 					return;
 				}
 
 				if (clientId === "") {
-					log("client id required");
+					log.info("client id required");
 					extSocket.close?.(IPCErrorCode.INVALID_CLIENTID);
 					return;
 				}
 
 				if (ignoreList.shouldIgnoreClientId(clientId)) {
-					log("client id is ignored:", clientId);
+					log.info("client id is ignored:", clientId);
 					extSocket.close?.(IPCErrorCode.TOKEN_REVOKED);
 					return;
 				}
 
 				socket.on("error", (e) => {
-					log("socket error", e);
+					log.info("socket error", e);
 				});
 
 				socket.on("close", (e) => {
-					log("socket closed", e);
+					log.info("socket closed", e);
 					this.handlers.close(extSocket);
 				});
 
@@ -294,7 +294,7 @@ export default class IPCServer {
 
 				extSocket._send = extSocket.send;
 				extSocket.send = (msg: RPCMessage) => {
-					if (env[ENV_DEBUG]) log("sending", msg);
+					if (env[ENV_DEBUG]) log.info("sending", msg);
 					socket.write(encode(IPCMessageType.FRAME, msg));
 				};
 
@@ -306,10 +306,10 @@ export default class IPCServer {
 	}
 
 	onMessage(socket: ExtendedSocket, msg: RPCMessage): void {
-		if (env[ENV_DEBUG]) log("message", msg);
+		if (env[ENV_DEBUG]) log.info("message", msg);
 
 		if (!msg || !msg.cmd) {
-			log("invalid payload - missing cmd");
+			log.info("invalid payload - missing cmd");
 			return;
 		}
 

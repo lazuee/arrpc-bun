@@ -11,9 +11,10 @@ import {
 	getDetectableDb,
 	STATE_FILE_NAME,
 } from "./constants";
+import { createLogger, print, printError } from "./logger";
 import { isHyperVEnabled } from "./platform";
 import type { ActivityPayload, DetectableApp, StateFileContent } from "./types";
-import { createLogger, formatDuration, getPortRange } from "./utils";
+import { formatDuration, getPortRange } from "./utils";
 
 const log = createLogger("cli", ...CLI_COLOR);
 
@@ -27,7 +28,7 @@ async function readStateFile(): Promise<StateFileContent | null> {
 		const content = await stateFile.json();
 		return content as StateFileContent;
 	} catch (error) {
-		log(`failed to read state file: ${error}`);
+		log.info(`failed to read state file: ${error}`);
 		return null;
 	}
 }
@@ -79,11 +80,11 @@ async function getBridgePort(): Promise<{ host: string; port: number }> {
 }
 
 export async function listDatabase(): Promise<void> {
-	console.log("Loading detectable games database...\n");
+	print("Loading detectable games database...\n");
 
 	const db = (await getDetectableDb()) as DetectableApp[];
 
-	console.log(`Total games in database: ${db.length.toLocaleString()}\n`);
+	print(`Total games in database: ${db.length.toLocaleString()}\n`);
 
 	const platforms = {
 		win32: 0,
@@ -116,16 +117,14 @@ export async function listDatabase(): Promise<void> {
 		}
 	}
 
-	console.log("Games by platform:");
-	console.log(`  Windows:        ${platforms.win32.toLocaleString()}`);
-	console.log(`  Linux:          ${platforms.linux.toLocaleString()}`);
-	console.log(`  macOS:          ${platforms.darwin.toLocaleString()}`);
-	console.log(
-		`  Multi-platform: ${platforms.multiplatform.toLocaleString()}`,
-	);
-	console.log("");
+	print("Games by platform:");
+	print(`  Windows:        ${platforms.win32.toLocaleString()}`);
+	print(`  Linux:          ${platforms.linux.toLocaleString()}`);
+	print(`  macOS:          ${platforms.darwin.toLocaleString()}`);
+	print(`  Multi-platform: ${platforms.multiplatform.toLocaleString()}`);
+	print("");
 
-	console.log("Example games (first 10):");
+	print("Example games (first 10):");
 	for (let i = 0; i < Math.min(10, db.length); i++) {
 		const app = db[i];
 		if (!app) continue;
@@ -134,36 +133,38 @@ export async function listDatabase(): Promise<void> {
 			?.map((exe) => exe.os || "all")
 			.filter((v, i, a) => a.indexOf(v) === i)
 			.join(", ");
-		console.log(
+		print(
 			`  ${i + 1}. ${app.name} (${exeCount} executables, platforms: ${platforms || "all"})`,
 		);
 	}
 
-	console.log("\nTo see currently detected games, run with --list-detected");
+	print("\nTo see currently detected games, run with --list-detected");
 }
 
 export async function listDetected(): Promise<void> {
 	const stateFile = await readStateFile();
 	if (stateFile && stateFile.activities.length > 0) {
-		console.log("Reading from arrpc state file...\n");
+		print("Reading from arrpc state file...\n");
 		displayDetectedGames(stateFile);
 		return;
 	}
 
-	console.log("Connecting to arrpc bridge...\n");
+	print("Connecting to arrpc bridge...\n");
 
 	let bridgeInfo: { host: string; port: number };
 	try {
 		bridgeInfo = await getBridgePort();
 	} catch (error) {
 		const err = error as Error;
-		console.error(`Error: ${err.message}`);
-		console.error("\nNo state file found and bridge is not available.");
-		console.error("Make sure arrpc is running.");
+		printError(`Error: ${err.message}`);
+		printError("\nNo state file found and bridge is not available.");
+		printError("Make sure arrpc is running.");
 		process.exit(1);
 	}
 
-	log(`found bridge at ${bridgeInfo.host}:${bridgeInfo.port}, connecting...`);
+	log.info(
+		`found bridge at ${bridgeInfo.host}:${bridgeInfo.port}, connecting...`,
+	);
 
 	const ws = new WebSocket(`ws://${bridgeInfo.host}:${bridgeInfo.port}`);
 
@@ -181,12 +182,12 @@ export async function listDetected(): Promise<void> {
 					detected.delete(data.socketId);
 				}
 			} catch (error) {
-				log("failed to parse message:", error);
+				log.error("failed to parse message:", error);
 			}
 		};
 
 		ws.onopen = () => {
-			log("connected, waiting for activity data...");
+			log.info("connected, waiting for activity data...");
 
 			setTimeout(() => {
 				ws.close();
@@ -195,7 +196,7 @@ export async function listDetected(): Promise<void> {
 		};
 
 		ws.onerror = (error) => {
-			console.error("WebSocket error:", error);
+			printError("WebSocket error:", error);
 			process.exit(1);
 		};
 
@@ -208,11 +209,11 @@ export async function listDetected(): Promise<void> {
 }
 
 function displayDetectedGames(stateFile: StateFileContent): void {
-	console.log("\nCurrently detected games:\n");
+	print("\nCurrently detected games:\n");
 
 	if (stateFile.activities.length === 0) {
-		console.log("  No games currently detected.");
-		console.log(
+		print("  No games currently detected.");
+		print(
 			"\n  Tip: Start a game and run this command again to see it detected.",
 		);
 		return;
@@ -222,25 +223,25 @@ function displayDetectedGames(stateFile: StateFileContent): void {
 		const activity = stateFile.activities[i];
 		if (!activity) continue;
 
-		console.log(`  ${i + 1}. ${activity.name}`);
-		console.log(`     App ID: ${activity.applicationId}`);
-		console.log(`     PID: ${activity.pid}`);
-		console.log(`     Socket: ${activity.socketId}`);
+		print(`  ${i + 1}. ${activity.name}`);
+		print(`     App ID: ${activity.applicationId}`);
+		print(`     PID: ${activity.pid}`);
+		print(`     Socket: ${activity.socketId}`);
 		if (activity.startTime) {
-			console.log(`     Duration: ${formatDuration(activity.startTime)}`);
+			print(`     Duration: ${formatDuration(activity.startTime)}`);
 		}
-		console.log("");
+		print("");
 	}
 }
 
 function displayDetectedGamesFromMap(
 	detected: Map<string, ActivityPayload>,
 ): void {
-	console.log("\nCurrently detected games:\n");
+	print("\nCurrently detected games:\n");
 
 	if (detected.size === 0) {
-		console.log("  No games currently detected.");
-		console.log(
+		print("  No games currently detected.");
+		print(
 			"\n  Tip: Start a game and run this command again to see it detected.",
 		);
 	} else {
@@ -255,14 +256,14 @@ function displayDetectedGamesFromMap(
 			const startTime = (activity as { timestamps?: { start?: number } })
 				.timestamps?.start;
 
-			console.log(`  ${index}. ${name}`);
-			console.log(`     App ID: ${appId}`);
-			console.log(`     PID: ${pid}`);
-			console.log(`     Socket: ${socketId}`);
+			print(`  ${index}. ${name}`);
+			print(`     App ID: ${appId}`);
+			print(`     PID: ${pid}`);
+			print(`     Socket: ${socketId}`);
 			if (startTime) {
-				console.log(`     Duration: ${formatDuration(startTime)}`);
+				print(`     Duration: ${formatDuration(startTime)}`);
 			}
-			console.log("");
+			print("");
 			index++;
 		}
 	}

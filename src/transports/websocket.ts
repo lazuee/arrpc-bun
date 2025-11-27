@@ -42,7 +42,7 @@ export default class WSServer {
 		);
 
 		if (useHyperVRange) {
-			log("Hyper-V detected, using extended port range");
+			log.info("Hyper-V detected, using extended port range");
 		}
 
 		const hostname = env[ENV_WEBSOCKET_HOST] || DEFAULT_LOCALHOST;
@@ -51,7 +51,7 @@ export default class WSServer {
 		let server: Server<unknown> | undefined;
 
 		while (port <= portRange[1]) {
-			if (env[ENV_DEBUG]) log("trying port", port);
+			if (env[ENV_DEBUG]) log.info("trying port", port);
 
 			try {
 				server = serve({
@@ -73,21 +73,24 @@ export default class WSServer {
 							origin !== "" &&
 							!ALLOWED_DISCORD_ORIGINS.includes(origin)
 						) {
-							log("disallowed origin", origin);
+							log.info("disallowed origin", origin);
 							return new Response("Disallowed origin", {
 								status: 403,
 							});
 						}
 
 						if (encoding !== WS_DEFAULT_ENCODING) {
-							log("unsupported encoding requested", encoding);
+							log.info(
+								"unsupported encoding requested",
+								encoding,
+							);
 							return new Response("Unsupported encoding", {
 								status: 400,
 							});
 						}
 
 						if (ver !== RPC_PROTOCOL_VERSION) {
-							log("unsupported version requested", ver);
+							log.info("unsupported version requested", ver);
 							return new Response("Unsupported version", {
 								status: 400,
 							});
@@ -97,7 +100,7 @@ export default class WSServer {
 							clientId &&
 							ignoreList.shouldIgnoreClientId(clientId)
 						) {
-							log("client id is ignored:", clientId);
+							log.info("client id is ignored:", clientId);
 							return new Response("Client ID is ignored", {
 								status: 403,
 							});
@@ -125,13 +128,13 @@ export default class WSServer {
 						close: (ws: ServerWebSocket<WSData>) => {
 							const extSocket =
 								ws as unknown as ExtendedWebSocket;
-							log("socket closed");
+							log.info("socket closed");
 							this.handlers.close(extSocket);
 						},
 					},
 				});
 
-				log("listening on", port);
+				log.info("listening on", port);
 				this.server = server;
 
 				if (env[ENV_IPC_MODE]) {
@@ -151,7 +154,7 @@ export default class WSServer {
 			} catch (e) {
 				const error = e as { code?: string; message?: string };
 				if (error.code === "EADDRINUSE") {
-					log(port, "in use!");
+					log.info(port, "in use!");
 					port++;
 					continue;
 				}
@@ -175,7 +178,12 @@ export default class WSServer {
 		const { clientId, encoding } = ws.data;
 
 		if (env[ENV_DEBUG]) {
-			log("new connection! clientId:", clientId, "encoding:", encoding);
+			log.info(
+				"new connection! clientId:",
+				clientId,
+				"encoding:",
+				encoding,
+			);
 		}
 
 		extSocket.clientId = clientId;
@@ -188,7 +196,7 @@ export default class WSServer {
 		};
 
 		extSocket.send = (msg: RPCMessage | string) => {
-			if (env[ENV_DEBUG]) log("sending", msg);
+			if (env[ENV_DEBUG]) log.info("sending", msg);
 			const data = typeof msg === "string" ? msg : JSON.stringify(msg);
 			extSocket._send?.(data);
 		};
@@ -201,12 +209,12 @@ export default class WSServer {
 
 		try {
 			const parsedMsg = JSON.parse(msg.toString()) as RPCMessage;
-			if (env[ENV_DEBUG]) log("message", parsedMsg);
+			if (env[ENV_DEBUG]) log.info("message", parsedMsg);
 			this.handlers.message(extSocket, parsedMsg);
 		} catch (e) {
-			log("invalid payload - malformed JSON");
+			log.info("invalid payload - malformed JSON");
 			if (env[ENV_DEBUG]) {
-				log("error:", e);
+				log.info("error:", e);
 			}
 		}
 	}

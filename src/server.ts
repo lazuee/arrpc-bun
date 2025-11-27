@@ -78,7 +78,7 @@ export default class RPCServer extends EventEmitter {
 	}
 
 	shutdown(): void {
-		log("shutting down...");
+		log.info("shutting down...");
 		this.removeAllListeners();
 	}
 
@@ -87,7 +87,7 @@ export default class RPCServer extends EventEmitter {
 		socket.socketId = id;
 
 		if (env[ENV_DEBUG]) {
-			log(
+			log.info(
 				"new connection",
 				`socket #${id}`,
 				`clientId: ${socket.clientId || "unknown"}`,
@@ -129,7 +129,12 @@ export default class RPCServer extends EventEmitter {
 		name?: string,
 	): void {
 		if (env[ENV_DEBUG]) {
-			log("process activity event", { socketId, activity, pid, name });
+			log.info("process activity event", {
+				socketId,
+				activity,
+				pid,
+				name,
+			});
 		}
 
 		if (
@@ -160,7 +165,7 @@ export default class RPCServer extends EventEmitter {
 		{ cmd, args, nonce }: RPCMessage,
 	): Promise<void> {
 		if (env[ENV_DEBUG]) {
-			log(
+			log.info(
 				"message received",
 				`socket #${socket.socketId}`,
 				`cmd: ${cmd}`,
@@ -220,7 +225,7 @@ export default class RPCServer extends EventEmitter {
 				normalizeTimestamps(timestamps);
 
 				if (env[ENV_DEBUG]) {
-					log("emitting activity event");
+					log.info("emitting activity event");
 				}
 				this.emit("activity", {
 					activity: {

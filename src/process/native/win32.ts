@@ -226,7 +226,7 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 		);
 
 		if (!hSnapshot || hSnapshot === -1) {
-			log(
+			log.info(
 				"failed to create process snapshot:",
 				kernel32.symbols.GetLastError(),
 			);
@@ -329,7 +329,7 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 			kernel32.symbols.CloseHandle(hSnapshot);
 		}
 	} catch (error) {
-		log("error enumerating processes:", error);
+		log.info("error enumerating processes:", error);
 	}
 
 	return processes;
