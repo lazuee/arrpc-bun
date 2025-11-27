@@ -32,7 +32,9 @@
 	{
 		"id": "STREAMERMODE",
 		"name": "OBS",
-		"aliases": ["Obs"],
+		"aliases": [
+			"Obs"
+		],
 		"executables": [
 			{
 				"is_launcher": false,
