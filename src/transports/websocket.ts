@@ -3,7 +3,6 @@ import {
 	ALLOWED_DISCORD_ORIGINS,
 	DEFAULT_LOCALHOST,
 	ENV_DEBUG,
-	ENV_IPC_MODE,
 	ENV_WEBSOCKET_HOST,
 	RPC_PROTOCOL_VERSION,
 	WEBSOCKET_COLOR,
@@ -13,6 +12,7 @@ import {
 } from "../constants";
 import { ignoreList } from "../ignore-list";
 import { isHyperVEnabled } from "../platform";
+import { stateManager } from "../state";
 import type { ExtendedWebSocket, Handlers, RPCMessage } from "../types";
 import { createLogger, getPortRange } from "../utils";
 
@@ -136,20 +136,7 @@ export default class WSServer {
 
 				log.info("listening on", port);
 				this.server = server;
-
-				if (env[ENV_IPC_MODE]) {
-					process.stderr.write(
-						`${JSON.stringify({
-							type: "SERVER_INFO",
-							data: {
-								port: server.port,
-								host: hostname,
-								service: "websocket",
-							},
-						})}\n`,
-					);
-				}
-
+				stateManager.setServer("websocket", { host: hostname, port });
 				break;
 			} catch (e) {
 				const error = e as { code?: string; message?: string };

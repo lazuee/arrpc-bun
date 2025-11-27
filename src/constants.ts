@@ -31,7 +31,6 @@ export const ENV_WEBSOCKET_HOST = "ARRPC_WEBSOCKET_HOST";
 export const ENV_NO_BRIDGE = "ARRPC_NO_BRIDGE";
 export const ENV_STATE_FILE = "ARRPC_STATE_FILE";
 export const ENV_DATA_DIR = "ARRPC_DATA_DIR";
-export const ENV_IPC_MODE = "ARRPC_IPC_MODE";
 export const ENV_PARENT_MONITOR = "ARRPC_PARENT_MONITOR";
 export const ENV_IGNORE_LIST_FILE = "ARRPC_IGNORE_LIST_FILE";
 
@@ -39,7 +38,8 @@ export const CLI_ARG_NO_PROCESS_SCANNING = "--no-process-scanning";
 export const CLI_ARG_LIST_DATABASE = "--list-database";
 export const CLI_ARG_LIST_DETECTED = "--list-detected";
 
-export const STATE_FILE_NAME = "arrpc-state.json";
+export const STATE_FILE_PREFIX = "arrpc-state";
+export const STATE_FILE_MAX_INDEX = 9;
 
 export const BRIDGE_PORT_RANGE: [number, number] = [1337, 1347];
 export const BRIDGE_PORT_RANGE_HYPERV: [number, number] = [60000, 60020];

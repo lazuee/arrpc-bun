@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { env, file } from "bun";
 import {
 	ENV_DEBUG,
-	ENV_IPC_MODE,
 	IPC_COLOR,
 	IPC_HEADER_SIZE,
 	IPC_MAX_RETRIES,
@@ -18,6 +17,7 @@ import {
 	WINDOWS_IPC_PIPE_PATH,
 } from "../constants";
 import { ignoreList } from "../ignore-list";
+import { stateManager } from "../state";
 import type { ExtendedSocket, Handlers, RPCMessage } from "../types";
 import { createLogger } from "../utils";
 
@@ -199,19 +199,7 @@ export default class IPCServer {
 		return new Promise((resolve) => {
 			server.listen(socketPath, () => {
 				log.info("listening at", socketPath);
-
-				if (env[ENV_IPC_MODE]) {
-					process.stderr.write(
-						`${JSON.stringify({
-							type: "SERVER_INFO",
-							data: {
-								socketPath: socketPath,
-								service: "ipc",
-							},
-						})}\n`,
-					);
-				}
-
+				stateManager.setIpcServer(socketPath);
 				resolve(ipcServer);
 			});
 		});

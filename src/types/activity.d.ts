@@ -40,9 +40,19 @@ export interface ActivityPayload {
 	socketId: string;
 }
 
+export interface ServerInfo {
+	host: string;
+	port: number;
+}
+
 export interface StateFileContent {
-	version: string;
+	appVersion: string;
 	timestamp: number;
+	servers?: {
+		bridge?: ServerInfo;
+		websocket?: ServerInfo;
+		ipc?: { socketPath: string };
+	};
 	activities: Array<{
 		socketId: string;
 		name: string;

@@ -7,7 +7,6 @@ import {
 	DEFAULT_VERSION,
 	ENV_DEBUG,
 	ENV_IGNORE_LIST_FILE,
-	ENV_IPC_MODE,
 	ENV_PARENT_MONITOR,
 	ENV_STATE_FILE,
 } from "./constants";
@@ -35,6 +34,8 @@ if (process.argv.includes(CLI_ARG_LIST_DETECTED)) {
 }
 
 log.info(`arRPC-Bun v${version}`);
+stateManager.setAppVersion(version);
+await stateManager.initialize();
 
 const ignoreListFile = env[ENV_IGNORE_LIST_FILE];
 if (ignoreListFile) {
@@ -58,17 +59,6 @@ server.on("activity", (data) => {
 	}
 });
 
-if (env[ENV_IPC_MODE]) {
-	process.stderr.write(
-		`${JSON.stringify({
-			type: "READY",
-			data: {
-				version,
-			},
-		})}\n`,
-	);
-}
-
 if (env[ENV_PARENT_MONITOR]) {
 	const initialParentPid = process.ppid;
 	let shutdownTriggered = false;
@@ -91,38 +81,6 @@ if (env[ENV_PARENT_MONITOR]) {
 			handleParentDeath();
 		}
 	});
-
-	if (process.stdin.isTTY === false) {
-		let buffer = "";
-
-		process.stdin.on("data", async (chunk) => {
-			buffer += chunk.toString();
-			const lines = buffer.split("\n");
-			buffer = lines.pop() || "";
-
-			for (const line of lines) {
-				if (!line.trim()) continue;
-
-				try {
-					const message = JSON.parse(line);
-					await handleParentMessage(message);
-				} catch (err) {
-					if (env[ENV_DEBUG]) {
-						log.info(`failed to parse stdin message: ${err}`);
-					}
-				}
-			}
-		});
-
-		process.stdin.on("end", () => {
-			if (env[ENV_DEBUG]) {
-				log.info("stdin closed");
-			}
-			handleParentDeath();
-		});
-
-		process.stdin.resume();
-	}
 
 	const parentMonitor = setInterval(() => {
 		if (shutdownTriggered) {
@@ -148,138 +106,13 @@ if (env[ENV_PARENT_MONITOR]) {
 			);
 			clearInterval(parentMonitor);
 			handleParentDeath();
-			return;
-		}
-
-		if (env[ENV_IPC_MODE]) {
-			try {
-				const heartbeat = `${JSON.stringify({
-					type: "HEARTBEAT",
-					data: { timestamp: Date.now() },
-				})}\n`;
-				const written = process.stderr.write(heartbeat);
-				if (!written) {
-					log.info("heartbeat write failed, parent likely dead");
-					clearInterval(parentMonitor);
-					handleParentDeath();
-				}
-			} catch (err) {
-				log.info(`heartbeat error: ${err}, parent likely dead`);
-				clearInterval(parentMonitor);
-				handleParentDeath();
-			}
 		}
 	}, 2000);
 }
 
-async function handleParentMessage(message: {
-	type: string;
-	data?: { games?: string[] };
-}) {
-	if (env[ENV_DEBUG]) {
-		log.info(`received parent message: ${JSON.stringify(message)}`);
-	}
-
-	try {
-		switch (message.type) {
-			case "IGNORE_GAMES": {
-				const games = message.data?.games;
-				if (Array.isArray(games)) {
-					await ignoreList.add(games);
-					if (env[ENV_IPC_MODE]) {
-						process.stderr.write(
-							`${JSON.stringify({
-								type: "IGNORE_GAMES_ACK",
-								data: { success: true, count: games.length },
-							})}\n`,
-						);
-					}
-				}
-				break;
-			}
-
-			case "UNIGNORE_GAMES": {
-				const games = message.data?.games;
-				if (Array.isArray(games)) {
-					await ignoreList.remove(games);
-					if (env[ENV_IPC_MODE]) {
-						process.stderr.write(
-							`${JSON.stringify({
-								type: "UNIGNORE_GAMES_ACK",
-								data: { success: true, count: games.length },
-							})}\n`,
-						);
-					}
-				}
-				break;
-			}
-
-			case "CLEAR_IGNORED_GAMES": {
-				await ignoreList.clear();
-				if (env[ENV_IPC_MODE]) {
-					process.stderr.write(
-						`${JSON.stringify({
-							type: "CLEAR_IGNORED_GAMES_ACK",
-							data: { success: true },
-						})}\n`,
-					);
-				}
-				break;
-			}
-
-			case "GET_IGNORED_GAMES": {
-				const games = ignoreList.getAll();
-				if (env[ENV_IPC_MODE]) {
-					process.stderr.write(
-						`${JSON.stringify({
-							type: "IGNORED_GAMES",
-							data: { games },
-						})}\n`,
-					);
-				}
-				break;
-			}
-
-			case "RELOAD_IGNORE_LIST": {
-				const result = await ignoreList.reload();
-				if (env[ENV_IPC_MODE]) {
-					process.stderr.write(
-						`${JSON.stringify({
-							type: "IGNORE_LIST_RELOADED",
-							data: result,
-						})}\n`,
-					);
-				}
-				break;
-			}
-
-			default:
-				if (env[ENV_DEBUG]) {
-					log.info(`unknown parent message type: ${message.type}`);
-				}
-		}
-	} catch (err) {
-		if (env[ENV_IPC_MODE]) {
-			process.stderr.write(
-				`${JSON.stringify({
-					type: "ERROR",
-					data: {
-						message:
-							err instanceof Error
-								? err.message
-								: "Unknown error",
-					},
-				})}\n`,
-			);
-		}
-	}
-}
-
 const shutdown = async () => {
 	log.info("received shutdown signal");
-	if (env[ENV_STATE_FILE]) {
-		await stateManager.cleanup();
-	}
+	await stateManager.cleanup();
 	server.shutdown();
 	process.exit(0);
 };

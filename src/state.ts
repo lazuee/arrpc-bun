@@ -1,27 +1,85 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { env, write } from "bun";
-import { ENV_DEBUG, STATE_COLOR, STATE_FILE_NAME } from "./constants";
-import type { ActivityPayload, StateFileContent } from "./types";
+import { env, file, write } from "bun";
+import {
+	ENV_DEBUG,
+	STATE_COLOR,
+	STATE_FILE_MAX_INDEX,
+	STATE_FILE_PREFIX,
+} from "./constants";
+import type { ActivityPayload, ServerInfo, StateFileContent } from "./types";
 import { createLogger } from "./utils";
 
 const log = createLogger("state", ...STATE_COLOR);
 
+interface Servers {
+	bridge?: ServerInfo;
+	websocket?: ServerInfo;
+	ipc?: { socketPath: string };
+}
+
 class StateManager {
 	private activities = new Map<string, ActivityPayload>();
-	private stateFilePath: string;
+	private servers: Servers = {};
+	private stateFilePath: string | null = null;
+	private appVersion = "unknown";
 	private writeDebounceTimer: Timer | null = null;
 	private readonly DEBOUNCE_MS = 100;
 
-	constructor() {
-		this.stateFilePath = join(tmpdir(), STATE_FILE_NAME);
+	async initialize(): Promise<void> {
+		const tempDir = tmpdir();
+
+		for (let i = 0; i <= STATE_FILE_MAX_INDEX; i++) {
+			const path = join(tempDir, `${STATE_FILE_PREFIX}-${i}`);
+			const f = file(path);
+
+			if (await f.exists()) {
+				try {
+					const content = (await f.json()) as StateFileContent;
+					const age = Date.now() - content.timestamp;
+					if (age > 10000) {
+						this.stateFilePath = path;
+						break;
+					}
+				} catch {
+					this.stateFilePath = path;
+					break;
+				}
+			} else {
+				this.stateFilePath = path;
+				break;
+			}
+		}
+
+		if (!this.stateFilePath) {
+			log.warn(`all state file slots in use (0-${STATE_FILE_MAX_INDEX})`);
+			this.stateFilePath = join(
+				tempDir,
+				`${STATE_FILE_PREFIX}-${process.pid}`,
+			);
+		}
+
 		if (env[ENV_DEBUG]) {
 			log.info(`state file path: ${this.stateFilePath}`);
 		}
 	}
 
-	getStateFilePath(): string {
+	setAppVersion(version: string): void {
+		this.appVersion = version;
+	}
+
+	getStateFilePath(): string | null {
 		return this.stateFilePath;
+	}
+
+	setServer(type: "bridge" | "websocket", info: ServerInfo): void {
+		this.servers[type] = info;
+		this.scheduleWrite();
+	}
+
+	setIpcServer(socketPath: string): void {
+		this.servers.ipc = { socketPath };
+		this.scheduleWrite();
 	}
 
 	update(payload: ActivityPayload): void {
@@ -30,7 +88,10 @@ class StateManager {
 		} else {
 			this.activities.delete(payload.socketId);
 		}
+		this.scheduleWrite();
+	}
 
+	private scheduleWrite(): void {
 		if (this.writeDebounceTimer) {
 			clearTimeout(this.writeDebounceTimer);
 		}
@@ -40,9 +101,12 @@ class StateManager {
 	}
 
 	private async writeToFile(): Promise<void> {
+		if (!this.stateFilePath) return;
+
 		const content: StateFileContent = {
-			version: "1",
+			appVersion: this.appVersion,
 			timestamp: Date.now(),
+			servers: this.servers,
 			activities: [],
 		};
 
@@ -80,15 +144,10 @@ class StateManager {
 		if (this.writeDebounceTimer) {
 			clearTimeout(this.writeDebounceTimer);
 		}
+		if (!this.stateFilePath) return;
+
 		try {
-			await write(
-				this.stateFilePath,
-				JSON.stringify({
-					version: "1",
-					timestamp: Date.now(),
-					activities: [],
-				}),
-			);
+			await file(this.stateFilePath).unlink();
 			if (env[ENV_DEBUG]) {
 				log.info("cleaned up state file");
 			}

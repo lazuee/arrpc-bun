@@ -9,7 +9,8 @@ import {
 	ENV_BRIDGE_HOST,
 	ENV_BRIDGE_PORT,
 	getDetectableDb,
-	STATE_FILE_NAME,
+	STATE_FILE_MAX_INDEX,
+	STATE_FILE_PREFIX,
 } from "./constants";
 import { createLogger, print, printError } from "./logger";
 import { isHyperVEnabled } from "./platform";
@@ -19,18 +20,24 @@ import { formatDuration, getPortRange } from "./utils";
 const log = createLogger("cli", ...CLI_COLOR);
 
 async function readStateFile(): Promise<StateFileContent | null> {
-	const stateFilePath = join(tmpdir(), STATE_FILE_NAME);
-	try {
-		const stateFile = file(stateFilePath);
-		if (!(await stateFile.exists())) {
-			return null;
+	const tempDir = tmpdir();
+
+	for (let i = 0; i <= STATE_FILE_MAX_INDEX; i++) {
+		const path = join(tempDir, `${STATE_FILE_PREFIX}-${i}`);
+		const f = file(path);
+
+		if (await f.exists()) {
+			try {
+				const content = (await f.json()) as StateFileContent;
+				const age = Date.now() - content.timestamp;
+				if (age < 10000) {
+					return content;
+				}
+			} catch {}
 		}
-		const content = await stateFile.json();
-		return content as StateFileContent;
-	} catch (error) {
-		log.info(`failed to read state file: ${error}`);
-		return null;
 	}
+
+	return null;
 }
 
 async function getBridgePort(): Promise<{ host: string; port: number }> {

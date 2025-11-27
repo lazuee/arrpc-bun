@@ -37,7 +37,8 @@ class Logger {
 
 		let output: string;
 		if (isDebug) {
-			const timestamp = new Date().toISOString().split("T")[1]?.slice(0, -1) ?? "";
+			const timestamp =
+				new Date().toISOString().split("T")[1]?.slice(0, -1) ?? "";
 			output = `${rgb(...LOG_COLOR_TIMESTAMP, timestamp)} ${this.basePrefix} ${message}\n`;
 		} else {
 			output = `${this.basePrefix} ${message}\n`;

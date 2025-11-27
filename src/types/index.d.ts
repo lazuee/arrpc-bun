@@ -1,8 +1,10 @@
 export type {
 	Activity,
 	ActivityPayload,
+	ServerInfo,
 	StateFileContent,
 } from "./activity.d.ts";
+export type { BridgeMessage } from "./bridge.d.ts";
 export type {
 	DeepLinkArgs,
 	InviteArgs,

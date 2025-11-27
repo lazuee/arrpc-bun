@@ -7,11 +7,12 @@ import {
 	ENV_BRIDGE_HOST,
 	ENV_BRIDGE_PORT,
 	ENV_DEBUG,
-	ENV_IPC_MODE,
 	ENV_NO_BRIDGE,
 } from "./constants";
+import { ignoreList } from "./ignore-list";
 import { isHyperVEnabled } from "./platform";
-import type { ActivityPayload } from "./types";
+import { stateManager } from "./state";
+import type { ActivityPayload, BridgeMessage } from "./types";
 import { createLogger, getPortRange } from "./utils";
 
 const log = createLogger("bridge", ...BRIDGE_COLOR);
@@ -19,6 +20,74 @@ const log = createLogger("bridge", ...BRIDGE_COLOR);
 const lastMsg = new Map<string, ActivityPayload>();
 const clients = new Set<ServerWebSocket<unknown>>();
 let bridgeServer: Server<unknown> | undefined;
+
+async function handleMessage(
+	ws: ServerWebSocket<unknown>,
+	message: BridgeMessage,
+): Promise<void> {
+	if (env[ENV_DEBUG]) {
+		log.info("received message:", message);
+	}
+
+	const respond = (type: string, data: unknown) => {
+		ws.send(JSON.stringify({ type, data }));
+	};
+
+	try {
+		switch (message.type) {
+			case "IGNORE_GAMES": {
+				const games = message.data?.games;
+				if (Array.isArray(games)) {
+					await ignoreList.add(games);
+					respond("IGNORE_GAMES_ACK", {
+						success: true,
+						count: games.length,
+					});
+				}
+				break;
+			}
+
+			case "UNIGNORE_GAMES": {
+				const games = message.data?.games;
+				if (Array.isArray(games)) {
+					await ignoreList.remove(games);
+					respond("UNIGNORE_GAMES_ACK", {
+						success: true,
+						count: games.length,
+					});
+				}
+				break;
+			}
+
+			case "CLEAR_IGNORED_GAMES": {
+				await ignoreList.clear();
+				respond("CLEAR_IGNORED_GAMES_ACK", { success: true });
+				break;
+			}
+
+			case "GET_IGNORED_GAMES": {
+				const games = ignoreList.getAll();
+				respond("IGNORED_GAMES", { games });
+				break;
+			}
+
+			case "RELOAD_IGNORE_LIST": {
+				const result = await ignoreList.reload();
+				respond("IGNORE_LIST_RELOADED", result);
+				break;
+			}
+
+			default:
+				if (env[ENV_DEBUG]) {
+					log.info("unknown message type:", message.type);
+				}
+		}
+	} catch (err) {
+		respond("ERROR", {
+			message: err instanceof Error ? err.message : "Unknown error",
+		});
+	}
+}
 
 export function getPort(): number | undefined {
 	return bridgeServer?.port;
@@ -89,7 +158,7 @@ export async function init(): Promise<void> {
 				},
 				websocket: {
 					open(ws) {
-						log.info("web connected");
+						log.info("client connected");
 						clients.add(ws);
 
 						for (const msg of lastMsg.values()) {
@@ -98,9 +167,22 @@ export async function init(): Promise<void> {
 							}
 						}
 					},
-					message() {},
+					async message(ws, data) {
+						try {
+							const message = JSON.parse(
+								typeof data === "string"
+									? data
+									: new TextDecoder().decode(data),
+							) as BridgeMessage;
+							await handleMessage(ws, message);
+						} catch (err) {
+							if (env[ENV_DEBUG]) {
+								log.info("failed to parse message:", err);
+							}
+						}
+					},
 					close(ws) {
-						log.info("web disconnected");
+						log.info("client disconnected");
 						clients.delete(ws);
 					},
 				},
@@ -108,20 +190,7 @@ export async function init(): Promise<void> {
 
 			bridgeServer = server;
 			log.info("listening on", port);
-
-			if (env[ENV_IPC_MODE]) {
-				process.stderr.write(
-					`${JSON.stringify({
-						type: "SERVER_INFO",
-						data: {
-							port: server.port,
-							host: hostname,
-							service: "bridge",
-						},
-					})}\n`,
-				);
-			}
-
+			stateManager.setServer("bridge", { host: hostname, port });
 			break;
 		} catch (e) {
 			const error = e as { code?: string; message?: string };
