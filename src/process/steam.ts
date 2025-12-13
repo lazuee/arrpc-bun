@@ -52,9 +52,7 @@ function extractNestedBlock(content: string, startPos: number): string | null {
 	return null;
 }
 
-async function scanLibraryManifests(
-	steamappsPath: string,
-): Promise<string[]> {
+async function scanLibraryManifests(steamappsPath: string): Promise<string[]> {
 	const apps: string[] = [];
 	const glob = new Glob("appmanifest_*.acf");
 
