@@ -54,7 +54,7 @@ try {
 }
 
 const fixesResponse = await fetch(
-	"https://raw.githubusercontent.com/Creationsss/arrpc-bun/refs/heads/main/detectable_fixes.json",
+	"https://gist.githubusercontent.com/Creationsss/2f25b7d76259b8fd2f23cf27cd538162/raw/detectable_fixes.json",
 );
 
 if (!fixesResponse.ok) {
