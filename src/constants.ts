@@ -1,25 +1,30 @@
 import { join } from "node:path";
 import { file } from "bun";
 
-import detectableDbRaw from "../detectable.json";
-import detectableFixesDbRaw from "../detectable_fixes.json";
+async function loadJson<T>(path: string, fallback: T): Promise<T> {
+	const f = file(path);
+	if (await f.exists()) {
+		return (await f.json()) as T;
+	}
+	return fallback;
+}
+
+const ROOT_DIR = new URL("..", import.meta.url).pathname;
 
 export async function getDetectableDb() {
 	const dataDir = process.env[ENV_DATA_DIR];
-	if (dataDir) {
-		const customPath = join(dataDir, "detectable.json");
-		return await file(customPath).json();
-	}
-	return detectableDbRaw;
+	const path = dataDir
+		? join(dataDir, "detectable.json")
+		: join(ROOT_DIR, "detectable.json");
+	return loadJson(path, []);
 }
 
 export async function getCustomDb() {
 	const dataDir = process.env[ENV_DATA_DIR];
-	if (dataDir) {
-		const customPath = join(dataDir, "detectable_fixes.json");
-		return await file(customPath).json();
-	}
-	return detectableFixesDbRaw;
+	const path = dataDir
+		? join(dataDir, "detectable_fixes.json")
+		: join(ROOT_DIR, "detectable_fixes.json");
+	return loadJson(path, []);
 }
 
 export const ENV_DEBUG = "ARRPC_DEBUG";
