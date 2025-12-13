@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { env, file } from "bun";
+import { env, file, Glob } from "bun";
 import {
 	ENV_DEBUG,
 	ENV_NO_STEAM,
@@ -52,6 +52,22 @@ function extractNestedBlock(content: string, startPos: number): string | null {
 	return null;
 }
 
+async function scanLibraryManifests(
+	steamappsPath: string,
+): Promise<string[]> {
+	const apps: string[] = [];
+	const glob = new Glob("appmanifest_*.acf");
+
+	for await (const manifestFile of glob.scan({ cwd: steamappsPath })) {
+		const match = manifestFile.match(/appmanifest_(\d+)\.acf/);
+		if (match?.[1]) {
+			apps.push(match[1]);
+		}
+	}
+
+	return apps;
+}
+
 async function parseSteamLibraries(): Promise<SteamLibrary[]> {
 	const libraries: SteamLibrary[] = [];
 
@@ -79,25 +95,8 @@ async function parseSteamLibraries(): Promise<SteamLibrary[]> {
 				if (!pathMatch?.[1]) continue;
 
 				const libraryPath = pathMatch[1];
-				const apps: string[] = [];
-
-				const appsBlockMatch = libraryBlock.match(/"apps"\s*\{/);
-				if (appsBlockMatch?.index !== undefined) {
-					const appsBlock = extractNestedBlock(
-						libraryBlock,
-						appsBlockMatch.index + appsBlockMatch[0].length - 1,
-					);
-
-					if (appsBlock) {
-						const appIdMatches = appsBlock.matchAll(/"(\d+)"/g);
-						for (const appMatch of appIdMatches) {
-							const appId = appMatch[1];
-							if (appId) {
-								apps.push(appId);
-							}
-						}
-					}
-				}
+				const steamappsPath = join(libraryPath, "steamapps");
+				const apps = await scanLibraryManifests(steamappsPath);
 
 				if (apps.length > 0) {
 					libraries.push({ path: libraryPath, apps });
