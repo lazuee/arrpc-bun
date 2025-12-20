@@ -192,11 +192,15 @@ function matchesExecutable(
 	return true;
 }
 
+interface GameState {
+	name: string;
+	pid: number;
+	timestamp: number;
+}
+
 export default class ProcessServer {
 	private handlers!: Handlers;
-	private timestamps: Record<string, number> = {};
-	private names: Record<string, string> = {};
-	private pids: Record<string, number> = {};
+	private gameState: Map<string, GameState> = new Map();
 	private pathCache: Map<
 		number,
 		{ path: string; normalized: string; variations: string[] }
@@ -353,7 +357,8 @@ export default class ProcessServer {
 					for (const id of cachedResults) ids.add(id);
 
 					for (const id of cachedResults) {
-						const name = this.names[id];
+						const state = this.gameState.get(id);
+						const name = state?.name;
 						if (!name) continue;
 
 						const shouldIgnore = ignoreList.shouldIgnore(
@@ -377,13 +382,14 @@ export default class ProcessServer {
 						}
 						processedInThisScan.add(id);
 
-						const isNewDetection = !this.timestamps[id];
-						const oldPid = this.pids[id];
+						const isNewDetection = !state;
+						const oldPid = state?.pid;
 						const pidChanged = oldPid !== pid;
 
 						if (isNewDetection || pidChanged) {
-							this.names[id] = name;
-							this.pids[id] = pid;
+							const timestamp = isNewDetection
+								? Date.now()
+								: (state?.timestamp ?? Date.now());
 
 							if (isNewDetection) {
 								log.info("detected game!", name);
@@ -393,15 +399,23 @@ export default class ProcessServer {
 									log.info(`  process path: ${_path}`);
 									log.info(`  matched: ${name} (from cache)`);
 								}
-								this.timestamps[id] = Date.now();
 							} else if (pidChanged) {
 								log.info("game restarted!", name);
 								if (env[ENV_DEBUG]) {
 									log.info(`  old PID: ${oldPid}`);
 									log.info(`  new PID: ${pid}`);
 								}
-								this.timestamps[id] = Date.now();
 							}
+
+							const newTimestamp =
+								isNewDetection || pidChanged
+									? Date.now()
+									: timestamp;
+							this.gameState.set(id, {
+								name,
+								pid,
+								timestamp: newTimestamp,
+							});
 
 							this.handlers.activity(
 								id,
@@ -409,7 +423,7 @@ export default class ProcessServer {
 									application_id: id,
 									name,
 									timestamps: {
-										start: this.timestamps[id],
+										start: newTimestamp,
 									},
 								},
 								pid,
@@ -517,14 +531,12 @@ export default class ProcessServer {
 						}
 						processedInThisScan.add(id);
 
-						const isNewDetection = !this.timestamps[id];
-						const oldPid = this.pids[id];
+						const state = this.gameState.get(id);
+						const isNewDetection = !state;
+						const oldPid = state?.pid;
 						const pidChanged = oldPid !== pid;
 
 						if (isNewDetection || pidChanged) {
-							this.names[id] = name;
-							this.pids[id] = pid;
-
 							if (isNewDetection) {
 								log.info("detected game!", name);
 								if (env[ENV_DEBUG]) {
@@ -535,15 +547,20 @@ export default class ProcessServer {
 										`  matched: ${name} in path variations`,
 									);
 								}
-								this.timestamps[id] = Date.now();
 							} else if (pidChanged) {
 								log.info("game restarted!", name);
 								if (env[ENV_DEBUG]) {
 									log.info(`  old PID: ${oldPid}`);
 									log.info(`  new PID: ${pid}`);
 								}
-								this.timestamps[id] = Date.now();
 							}
+
+							const newTimestamp = Date.now();
+							this.gameState.set(id, {
+								name,
+								pid,
+								timestamp: newTimestamp,
+							});
 
 							this.handlers.activity(
 								id,
@@ -551,7 +568,7 @@ export default class ProcessServer {
 									application_id: id,
 									name,
 									timestamps: {
-										start: this.timestamps[id],
+										start: newTimestamp,
 									},
 								},
 								pid,
@@ -578,19 +595,11 @@ export default class ProcessServer {
 				}
 			}
 
-			for (const id in this.timestamps) {
+			for (const [id, state] of this.gameState) {
 				if (!ids.has(id)) {
-					const gameName = this.names[id];
-					log.info("lost game!", gameName ?? "unknown");
-
-					const pid = this.pids[id];
-					if (pid !== undefined) {
-						this.handlers.activity(id, null, pid);
-					}
-
-					delete this.timestamps[id];
-					delete this.names[id];
-					delete this.pids[id];
+					log.info("lost game!", state.name);
+					this.handlers.activity(id, null, state.pid);
+					this.gameState.delete(id);
 				}
 			}
 
