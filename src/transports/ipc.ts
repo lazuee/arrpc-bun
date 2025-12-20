@@ -269,13 +269,25 @@ export default class IPCServer {
 					return;
 				}
 
+				let closed = false;
+				const handleClose = (reason: string) => {
+					if (closed) return;
+					closed = true;
+					log.info("socket closed:", reason);
+					this.handlers.close(extSocket);
+				};
+
 				socket.on("error", (e) => {
 					log.info("socket error", e);
+					handleClose("error");
 				});
 
-				socket.on("close", (e) => {
-					log.info("socket closed", e);
-					this.handlers.close(extSocket);
+				socket.on("end", () => {
+					handleClose("end");
+				});
+
+				socket.on("close", () => {
+					handleClose("close");
 				});
 
 				socket.on("request", this.onMessage.bind(this, extSocket));
