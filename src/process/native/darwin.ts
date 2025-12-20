@@ -1,24 +1,13 @@
 import { homedir } from "node:os";
-import { resolve, sep } from "node:path";
+import { resolve } from "node:path";
 import { spawn } from "bun";
+import { isSteamPath } from "../../constants";
 import type { ProcessInfo } from "../../types";
 import { resolveSteamApp } from "../steam";
 
 const winExePathRegex =
 	/((?:(?:[a-zA-Z]:|\\\\[\w\s.]+\\[\w\s.$]+)\\(?:[\w\s.]+\\)*)(?:[\w\s.]*?)\.exe)/;
 const parallelsDir = resolve(homedir(), "Applications (Parallels)");
-
-const STEAM_PATH_INDICATORS = [
-	`${sep}Steam${sep}`,
-	`${sep}steam${sep}`,
-	`${sep}steamapps${sep}`,
-] as const;
-
-function isSteamPath(pathLower: string): boolean {
-	return STEAM_PATH_INDICATORS.some((indicator) =>
-		pathLower.includes(indicator.toLowerCase()),
-	);
-}
 
 function parseCommandLine(cmdline: string): { exe: string; args: string[] } {
 	const appIndex = cmdline.toLowerCase().indexOf(".app");

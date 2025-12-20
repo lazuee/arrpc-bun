@@ -1,23 +1,14 @@
 import { dlopen, FFIType, type Pointer, suffix } from "bun:ffi";
-import { sep } from "node:path";
-import { PROCESS_COLOR, SYSTEM_EXECUTABLES } from "../../constants";
+import {
+	isSteamPath,
+	PROCESS_COLOR,
+	SYSTEM_EXECUTABLES,
+} from "../../constants";
 import type { ProcessInfo } from "../../types";
 import { createLogger } from "../../utils";
 import { resolveSteamApp } from "../steam";
 
 const log = createLogger("process:win32", ...PROCESS_COLOR);
-
-const STEAM_PATH_INDICATORS = [
-	`${sep}Steam${sep}`,
-	`${sep}steam${sep}`,
-	`${sep}steamapps${sep}`,
-] as const;
-
-function isSteamPath(pathLower: string): boolean {
-	return STEAM_PATH_INDICATORS.some((indicator) =>
-		pathLower.includes(indicator.toLowerCase()),
-	);
-}
 
 const TH32CS_SNAPPROCESS = 0x00000002;
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
@@ -244,6 +235,7 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 
 			let processCount = 0;
 			const YIELD_INTERVAL = 20;
+			const seenPids = new Set<number>();
 
 			if (failedOpens.size > 1000) {
 				failedOpens.clear();
@@ -270,6 +262,8 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 						);
 						continue;
 					}
+
+					seenPids.add(pid);
 
 					if (failedOpens.has(pid)) {
 						hasProcess = kernel32.symbols.Process32NextW(
@@ -324,6 +318,12 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 					hSnapshot,
 					pe32 as unknown as Pointer,
 				);
+			}
+
+			for (const failedPid of failedOpens) {
+				if (!seenPids.has(failedPid)) {
+					failedOpens.delete(failedPid);
+				}
 			}
 		} finally {
 			kernel32.symbols.CloseHandle(hSnapshot);

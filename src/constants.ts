@@ -105,6 +105,26 @@ export const STEAM_RUNTIME_PATHS = [
 	"compatibilitytools.d",
 ];
 
+export const STEAM_PATH_INDICATORS_LINUX = [
+	"/.steam/",
+	"/.local/share/steam/",
+	"/steamapps/",
+] as const;
+
+export const STEAM_PATH_INDICATORS_WINDOWS_DARWIN = [
+	"/steam/",
+	"/steamapps/",
+] as const;
+
+export function isSteamPath(pathLower: string): boolean {
+	const normalizedPath = pathLower.replaceAll("\\", "/");
+	const indicators =
+		process.platform === "linux"
+			? STEAM_PATH_INDICATORS_LINUX
+			: STEAM_PATH_INDICATORS_WINDOWS_DARWIN;
+	return indicators.some((indicator) => normalizedPath.includes(indicator));
+}
+
 export const SYSTEM_EXECUTABLES = new Set([
 	"system",
 	"registry",

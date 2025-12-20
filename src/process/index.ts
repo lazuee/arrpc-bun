@@ -260,15 +260,8 @@ export default class ProcessServer {
 		this.pathVariationsCache.set(normalizedPath, toCompare);
 
 		if (this.pathVariationsCache.size > 1000) {
-			const keysToDelete: string[] = [];
-			let count = 0;
-			for (const key of this.pathVariationsCache.keys()) {
-				keysToDelete.push(key);
-				if (++count >= 500) break;
-			}
-			for (const key of keysToDelete) {
-				this.pathVariationsCache.delete(key);
-			}
+			this.pathVariationsCache.clear();
+			this.pathVariationsCache.set(normalizedPath, toCompare);
 		}
 
 		return toCompare;
@@ -328,7 +321,7 @@ export default class ProcessServer {
 
 		try {
 			const processes = await NativeImpl.getProcesses();
-			const ids: string[] = [];
+			const ids = new Set<string>();
 			const activePids = new Set<number>();
 			const processedInThisScan = new Set<string>();
 
@@ -357,7 +350,7 @@ export default class ProcessServer {
 				const cachedResults = this.scanResultsCache.get(cacheKey);
 
 				if (cachedResults) {
-					ids.push(...cachedResults);
+					for (const id of cachedResults) ids.add(id);
 
 					for (const id of cachedResults) {
 						const name = this.names[id];
@@ -512,12 +505,12 @@ export default class ProcessServer {
 								log.info("ignoring game:", name);
 							}
 							this.ignoredGames.add(id);
-							ids.push(id);
+							ids.add(id);
 							break;
 						}
 
 						this.ignoredGames.delete(id);
-						ids.push(id);
+						ids.add(id);
 
 						if (processedInThisScan.has(id)) {
 							break;
@@ -576,15 +569,7 @@ export default class ProcessServer {
 			}
 
 			if (this.scanResultsCache.size > 500) {
-				const keysToDelete: string[] = [];
-				let count = 0;
-				for (const key of this.scanResultsCache.keys()) {
-					keysToDelete.push(key);
-					if (++count >= 250) break;
-				}
-				for (const key of keysToDelete) {
-					this.scanResultsCache.delete(key);
-				}
+				this.scanResultsCache.clear();
 			}
 
 			for (const cachedPid of this.pathCache.keys()) {
@@ -594,20 +579,23 @@ export default class ProcessServer {
 			}
 
 			for (const id in this.timestamps) {
-				if (!ids.includes(id)) {
+				if (!ids.has(id)) {
 					const gameName = this.names[id];
 					log.info("lost game!", gameName ?? "unknown");
-					delete this.timestamps[id];
 
 					const pid = this.pids[id];
 					if (pid !== undefined) {
 						this.handlers.activity(id, null, pid);
 					}
+
+					delete this.timestamps[id];
+					delete this.names[id];
+					delete this.pids[id];
 				}
 			}
 
 			for (const id of this.ignoredGames) {
-				if (!ids.includes(id)) {
+				if (!ids.has(id)) {
 					this.ignoredGames.delete(id);
 				}
 			}

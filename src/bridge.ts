@@ -93,6 +93,8 @@ export function getPort(): number | undefined {
 	return bridgeServer?.port;
 }
 
+const MAX_CACHED_ACTIVITIES = 50;
+
 export function send(msg: ActivityPayload): void {
 	if (env[ENV_DEBUG]) {
 		log.info(
@@ -102,7 +104,18 @@ export function send(msg: ActivityPayload): void {
 			msg,
 		);
 	}
-	lastMsg.set(msg.socketId, msg);
+
+	if (msg.activity === null) {
+		lastMsg.delete(msg.socketId);
+	} else {
+		lastMsg.set(msg.socketId, msg);
+
+		if (lastMsg.size > MAX_CACHED_ACTIVITIES) {
+			const firstKey = lastMsg.keys().next().value;
+			if (firstKey) lastMsg.delete(firstKey);
+		}
+	}
+
 	const msgStr = JSON.stringify(msg);
 	for (const client of clients) {
 		client.send(msgStr);

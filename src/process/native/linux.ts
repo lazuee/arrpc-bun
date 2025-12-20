@@ -1,9 +1,10 @@
-import { readlinkSync } from "node:fs";
+import { readlink } from "node:fs/promises";
 import { join, sep } from "node:path";
 import { file, Glob } from "bun";
 import {
 	ANTI_CHEAT_EXECUTABLES,
 	CMDLINE_NULL_SEPARATOR,
+	isSteamPath,
 	LINUX_PROC_DIR,
 } from "../../constants";
 import type { ProcessInfo } from "../../types";
@@ -12,18 +13,6 @@ import { resolveSteamApp } from "../steam";
 const ANTI_CHEAT_EXECUTABLES_LOWER = ANTI_CHEAT_EXECUTABLES.map((ac) =>
 	ac.toLowerCase(),
 );
-
-const STEAM_PATH_INDICATORS = [
-	`${sep}.steam${sep}`,
-	`${sep}.local${sep}share${sep}steam${sep}`,
-	`${sep}steamapps${sep}`,
-] as const;
-
-function isSteamPath(pathLower: string): boolean {
-	return STEAM_PATH_INDICATORS.some((indicator) =>
-		pathLower.includes(indicator),
-	);
-}
 
 export async function getProcesses(): Promise<ProcessInfo[]> {
 	const processes: ProcessInfo[] = [];
@@ -44,7 +33,7 @@ export async function getProcesses(): Promise<ProcessInfo[]> {
 						file(join(LINUX_PROC_DIR, pid, "cmdline")).text(),
 						(async () => {
 							try {
-								return readlinkSync(
+								return await readlink(
 									join(LINUX_PROC_DIR, pid, "exe"),
 								);
 							} catch {
