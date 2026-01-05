@@ -1,5 +1,7 @@
 import { join } from "node:path";
 import { file } from "bun";
+import embeddedDetectable from "../detectable.json";
+import embeddedFixes from "../detectable_fixes.json";
 
 async function loadJson<T>(path: string, fallback: T): Promise<T> {
 	const f = file(path);
@@ -9,22 +11,20 @@ async function loadJson<T>(path: string, fallback: T): Promise<T> {
 	return fallback;
 }
 
-const ROOT_DIR = new URL("..", import.meta.url).pathname;
-
 export async function getDetectableDb() {
-	const dataDir = process.env[ENV_DATA_DIR];
-	const path = dataDir
-		? join(dataDir, "detectable.json")
-		: join(ROOT_DIR, "detectable.json");
-	return loadJson(path, []);
+	const dataDir = process.env.ARRPC_DATA_DIR;
+	if (dataDir) {
+		return loadJson(join(dataDir, "detectable.json"), embeddedDetectable);
+	}
+	return embeddedDetectable;
 }
 
 export async function getCustomDb() {
-	const dataDir = process.env[ENV_DATA_DIR];
-	const path = dataDir
-		? join(dataDir, "detectable_fixes.json")
-		: join(ROOT_DIR, "detectable_fixes.json");
-	return loadJson(path, []);
+	const dataDir = process.env.ARRPC_DATA_DIR;
+	if (dataDir) {
+		return loadJson(join(dataDir, "detectable_fixes.json"), embeddedFixes);
+	}
+	return embeddedFixes;
 }
 
 export const ENV_DEBUG = "ARRPC_DEBUG";
